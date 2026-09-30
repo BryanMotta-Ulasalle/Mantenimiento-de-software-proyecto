@@ -9,6 +9,9 @@ const CartItemRow = ({ item, onUpdate, onDelete, disabled }) => {
   const quantity = Number(item.quantity || 0);
   const stock = Number(product?.stock || 0);
   const subtotal = Number(product?.price || 0) * quantity;
+  const isProductInactive = !product?.status;
+  const cannotDecrease = disabled || quantity <= 1;
+  const cannotIncrease = disabled || isProductInactive || quantity >= stock;
 
   return (
     <article className="grid gap-4 rounded-2xl border border-stone-200 bg-white p-4 sm:grid-cols-[7rem_1fr_auto] sm:items-center">
@@ -28,12 +31,18 @@ const CartItemRow = ({ item, onUpdate, onDelete, disabled }) => {
         <p className="text-sm text-stone-500">
           {formatProductPrice(product?.price)} por unidad
         </p>
+        <p className="text-sm text-stone-500">Stock disponible: {stock}</p>
+        {isProductInactive && (
+          <p className="text-sm font-medium text-red-700">
+            Este producto ya no está disponible.
+          </p>
+        )}
 
         <div className="mt-2 flex items-center gap-2">
           <Button
             size="sm"
             className="border border-stone-300"
-            disabled={disabled}
+            disabled={cannotDecrease}
             onClick={() => onUpdate(item.id, quantity - 1)}
             aria-label="Disminuir cantidad"
           >
@@ -43,7 +52,7 @@ const CartItemRow = ({ item, onUpdate, onDelete, disabled }) => {
           <Button
             size="sm"
             className="border border-stone-300"
-            disabled={disabled || quantity >= stock || !product?.status}
+            disabled={cannotIncrease}
             onClick={() => onUpdate(item.id, quantity + 1)}
             aria-label="Aumentar cantidad"
           >
