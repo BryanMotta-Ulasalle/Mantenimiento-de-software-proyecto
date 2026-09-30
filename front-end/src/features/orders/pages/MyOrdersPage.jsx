@@ -5,15 +5,7 @@ import H2 from "../../../components/H2";
 import LoadingState from "../../../components/LoadingState";
 import { formatProductPrice } from "../../products/utils/productFormatters";
 import useOrders from "../hooks/useOrders";
-
-const formatOrderDate = (date) => {
-  if (!date) return "Fecha no disponible";
-
-  return new Intl.DateTimeFormat("es-PE", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(date));
-};
+import { formatOrderDate } from "../utils/orderFormatters";
 
 const MyOrdersPage = () => {
   const location = useLocation();

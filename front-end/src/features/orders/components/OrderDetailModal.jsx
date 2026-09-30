@@ -3,6 +3,7 @@ import LoadingState from "../../../components/LoadingState";
 import Modal from "../../../components/Modal";
 import { formatProductPrice } from "../../products/utils/productFormatters";
 import useOrderDetail from "../hooks/useOrderDetail";
+import { formatOrderDate } from "../utils/orderFormatters";
 
 const OrderDetailModal = ({ orderId, customerName, onClose }) => {
   const { order, isLoading, error } = useOrderDetail(orderId);
@@ -26,6 +27,12 @@ const OrderDetailModal = ({ orderId, customerName, onClose }) => {
                 Estado
               </dt>
               <dd className="mt-1 capitalize">{order.status}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold uppercase text-stone-500">
+                Fecha del pedido
+              </dt>
+              <dd className="mt-1">{formatOrderDate(order.created_at)}</dd>
             </div>
             <div>
               <dt className="text-xs font-semibold uppercase text-stone-500">

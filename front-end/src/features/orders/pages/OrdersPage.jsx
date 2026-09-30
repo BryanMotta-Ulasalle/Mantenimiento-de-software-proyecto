@@ -9,6 +9,7 @@ import { formatProductPrice } from "../../products/utils/productFormatters";
 import useUsersAdmin from "../../users/hooks/useUsersAdmin";
 import OrderDetailModal from "../components/OrderDetailModal";
 import useOrders from "../hooks/useOrders";
+import { formatOrderDate } from "../utils/orderFormatters";
 
 const OrdersPage = () => {
   const { orders, isLoading, error } = useOrders();
@@ -41,8 +42,10 @@ const OrdersPage = () => {
     {
       key: "created_at",
       label: "Fecha",
-      render: () => (
-        <span className="text-sm text-stone-400">No disponible</span>
+      render: (value) => (
+        <span className="text-sm text-stone-600">
+          {formatOrderDate(value)}
+        </span>
       ),
     },
     {
