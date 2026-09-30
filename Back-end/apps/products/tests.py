@@ -1,6 +1,8 @@
 from decimal import Decimal
+from datetime import datetime
 
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -176,4 +178,228 @@ class ProductFilteringTests(APITestCase):
 
     def test_filters_without_matches_return_an_empty_list(self):
         self.assertEqual(self.get_product_ids({'search': 'monitor'}), set())
+
+
+class ProductOrderingTests(APITestCase):
+    def setUp(self):
+        self.technology = Category.objects.create(name='Tecnologia')
+        self.office = Category.objects.create(name='Oficina')
+        self.alpha = self._create_product(
+            name='Alfa',
+            category=self.technology,
+            price='30.00',
+            stock=3,
+            status=True,
+            created_at=datetime(2026, 1, 1, 9, 0),
+        )
+        self.mouse_basic = self._create_product(
+            name='Mouse Basico',
+            category=self.technology,
+            price='10.00',
+            stock=1,
+            status=True,
+            created_at=datetime(2026, 1, 2, 9, 0),
+        )
+        self.mouse_premium = self._create_product(
+            name='Mouse Premium',
+            category=self.technology,
+            price='25.00',
+            stock=5,
+            status=True,
+            created_at=datetime(2026, 1, 3, 9, 0),
+        )
+        self.mouse_inactive = self._create_product(
+            name='Mouse Inactivo',
+            category=self.technology,
+            price='20.00',
+            stock=0,
+            status=False,
+            created_at=datetime(2026, 1, 4, 9, 0),
+        )
+        self.zeta = self._create_product(
+            name='Zeta',
+            category=self.office,
+            price='40.00',
+            stock=2,
+            status=True,
+            created_at=datetime(2026, 1, 5, 9, 0),
+        )
+        self.list_url = reverse('product-list')
+
+    @staticmethod
+    def _create_product(name, category, price, stock, status, created_at):
+        product = Product.objects.create(
+            name=name,
+            category=category,
+            description='Producto de prueba',
+            price=Decimal(price),
+            stock=stock,
+            status=status,
+        )
+        Product.objects.filter(id=product.id).update(
+            created_at=timezone.make_aware(created_at),
+        )
+        return product
+
+    def get_ordered_product_ids(self, params=None):
+        response = self.client.get(self.list_url, params or {})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        return [product['id'] for product in response.data]
+
+    def test_orders_by_name_ascending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': 'name'}),
+            [
+                self.alpha.id,
+                self.mouse_basic.id,
+                self.mouse_inactive.id,
+                self.mouse_premium.id,
+                self.zeta.id,
+            ],
+        )
+
+    def test_orders_by_name_descending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': '-name'}),
+            [
+                self.zeta.id,
+                self.mouse_premium.id,
+                self.mouse_inactive.id,
+                self.mouse_basic.id,
+                self.alpha.id,
+            ],
+        )
+
+    def test_orders_by_price_ascending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': 'price'}),
+            [
+                self.mouse_basic.id,
+                self.mouse_inactive.id,
+                self.mouse_premium.id,
+                self.alpha.id,
+                self.zeta.id,
+            ],
+        )
+
+    def test_orders_by_price_descending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': '-price'}),
+            [
+                self.zeta.id,
+                self.alpha.id,
+                self.mouse_premium.id,
+                self.mouse_inactive.id,
+                self.mouse_basic.id,
+            ],
+        )
+
+    def test_orders_by_stock_ascending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': 'stock'}),
+            [
+                self.mouse_inactive.id,
+                self.mouse_basic.id,
+                self.zeta.id,
+                self.alpha.id,
+                self.mouse_premium.id,
+            ],
+        )
+
+    def test_orders_by_stock_descending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': '-stock'}),
+            [
+                self.mouse_premium.id,
+                self.alpha.id,
+                self.zeta.id,
+                self.mouse_basic.id,
+                self.mouse_inactive.id,
+            ],
+        )
+
+    def test_orders_by_created_at_ascending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': 'created_at'}),
+            [
+                self.alpha.id,
+                self.mouse_basic.id,
+                self.mouse_premium.id,
+                self.mouse_inactive.id,
+                self.zeta.id,
+            ],
+        )
+
+    def test_orders_by_created_at_descending(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({'ordering': '-created_at'}),
+            [
+                self.zeta.id,
+                self.mouse_inactive.id,
+                self.mouse_premium.id,
+                self.mouse_basic.id,
+                self.alpha.id,
+            ],
+        )
+
+    def test_combines_search_and_ordering(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({
+                'search': 'mouse',
+                'ordering': '-price',
+            }),
+            [
+                self.mouse_premium.id,
+                self.mouse_inactive.id,
+                self.mouse_basic.id,
+            ],
+        )
+
+    def test_combines_category_and_ordering(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({
+                'category': self.technology.id,
+                'ordering': 'price',
+            }),
+            [
+                self.mouse_basic.id,
+                self.mouse_inactive.id,
+                self.mouse_premium.id,
+                self.alpha.id,
+            ],
+        )
+
+    def test_combines_all_r01_filters_and_ordering(self):
+        self.assertEqual(
+            self.get_ordered_product_ids({
+                'search': 'mouse',
+                'category': self.technology.id,
+                'is_active': 'true',
+                'stock': 'available',
+                'ordering': '-price',
+            }),
+            [self.mouse_premium.id, self.mouse_basic.id],
+        )
+
+    def test_invalid_ordering_returns_a_validation_error(self):
+        response = self.client.get(self.list_url, {'ordering': 'unknown_field'})
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data['ordering'],
+            'Criterio de ordenamiento no válido.',
+        )
+
+    def test_without_ordering_preserves_id_order(self):
+        self.assertEqual(
+            self.get_ordered_product_ids(),
+            [
+                self.alpha.id,
+                self.mouse_basic.id,
+                self.mouse_premium.id,
+                self.mouse_inactive.id,
+                self.zeta.id,
+            ],
+        )
 

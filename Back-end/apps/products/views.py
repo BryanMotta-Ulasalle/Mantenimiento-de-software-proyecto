@@ -8,6 +8,18 @@ from apps.users.permissions import IsAdminOrEmployee
 from django.db.models import Count
 
 
+ALLOWED_ORDERING = {
+    'name',
+    '-name',
+    'price',
+    '-price',
+    'stock',
+    '-stock',
+    'created_at',
+    '-created_at',
+}
+
+
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.annotate(
         total_products=Count('products')
@@ -59,6 +71,14 @@ class ProductViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 'stock': 'Use available o out.'
             })
+
+        ordering = params.get('ordering')
+        if ordering:
+            if ordering not in ALLOWED_ORDERING:
+                raise ValidationError({
+                    'ordering': 'Criterio de ordenamiento no válido.'
+                })
+            queryset = queryset.order_by(ordering)
 
         return queryset
 
