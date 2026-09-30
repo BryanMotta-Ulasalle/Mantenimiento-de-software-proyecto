@@ -9,11 +9,22 @@ import useCategory from "../../../Home/hooks/useCategory";
 import useProducts from "../../hooks/useProducts";
 import { useState } from "react";
 
+const CUSTOMER_ORDERING_OPTIONS = [
+  { value: "", label: "Orden predeterminado" },
+  { value: "name", label: "Nombre A-Z" },
+  { value: "-name", label: "Nombre Z-A" },
+  { value: "price", label: "Precio: menor a mayor" },
+  { value: "-price", label: "Precio: mayor a menor" },
+  { value: "-created_at", label: "Más recientes" },
+  { value: "created_at", label: "Más antiguos" },
+];
+
 const ProductsPage = () => {
   const [filters, setFilters] = useState({
     search: "",
     category: "",
     is_active: "true",
+    ordering: "",
   });
   const { products, isInitialLoading, isRefreshing, error } = useProducts(filters);
   const {
@@ -55,8 +66,14 @@ const ProductsPage = () => {
           categories={categories}
           onChange={setFilters}
           onClear={() =>
-            setFilters({ search: "", category: "", is_active: "true" })
+            setFilters({
+              search: "",
+              category: "",
+              is_active: "true",
+              ordering: "",
+            })
           }
+          orderingOptions={CUSTOMER_ORDERING_OPTIONS}
         />
       </div>
       <ErrorMessage message={error || categoriesError} className="mx-5 mt-5" />

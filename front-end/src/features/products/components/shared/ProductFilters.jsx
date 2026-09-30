@@ -9,6 +9,7 @@ const ProductFilters = ({
   onClear,
   showStatus = false,
   showStock = false,
+  orderingOptions = [],
 }) => {
   const [searchValue, setSearchValue] = useState(filters.search);
   const searchTimeout = useRef(null);
@@ -43,7 +44,7 @@ const ProductFilters = ({
 
   return (
     <section className="rounded-2xl border border-stone-200 bg-white p-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <LabelInput
           id="product-search"
           name="search"
@@ -107,6 +108,27 @@ const ProductFilters = ({
               <option value="">Todo el stock</option>
               <option value="available">Con stock</option>
               <option value="out">Sin stock</option>
+            </select>
+          </div>
+        )}
+
+        {orderingOptions.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="product-ordering-filter" className="font-medium">
+              Ordenar por
+            </label>
+            <select
+              id="product-ordering-filter"
+              name="ordering"
+              value={filters.ordering}
+              onChange={updateFilter}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-3"
+            >
+              {orderingOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         )}

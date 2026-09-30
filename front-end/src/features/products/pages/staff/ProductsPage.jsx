@@ -17,6 +17,18 @@ import useDeleteProduct from "../../hooks/useDeleteProduct";
 import useProducts from "../../hooks/useProducts";
 import useUpdateProduct from "../../hooks/useUpdateProduct";
 
+const ADMIN_ORDERING_OPTIONS = [
+  { value: "", label: "Orden predeterminado" },
+  { value: "name", label: "Nombre A-Z" },
+  { value: "-name", label: "Nombre Z-A" },
+  { value: "price", label: "Precio: menor a mayor" },
+  { value: "-price", label: "Precio: mayor a menor" },
+  { value: "stock", label: "Stock: menor a mayor" },
+  { value: "-stock", label: "Stock: mayor a menor" },
+  { value: "created_at", label: "Más antiguos" },
+  { value: "-created_at", label: "Más recientes" },
+];
+
 const formatDate = (value) => {
   if (!value) return "Sin fecha";
   return new Intl.DateTimeFormat("es-PE", { dateStyle: "medium" }).format(
@@ -30,6 +42,7 @@ const ProductsPage = () => {
     category: "",
     is_active: "",
     stock: "",
+    ordering: "",
   });
   const {
     products,
@@ -196,10 +209,17 @@ const ProductsPage = () => {
         categories={categories}
         onChange={setFilters}
         onClear={() =>
-          setFilters({ search: "", category: "", is_active: "", stock: "" })
+          setFilters({
+            search: "",
+            category: "",
+            is_active: "",
+            stock: "",
+            ordering: "",
+          })
         }
         showStatus
         showStock
+        orderingOptions={ADMIN_ORDERING_OPTIONS}
       />
       <div className="relative" aria-busy={isRefreshing}>
         {isRefreshing && (
