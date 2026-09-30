@@ -56,11 +56,16 @@ class OrderViewSet(
             }
 
             stock_errors = []
+            product_errors = []
             for product_id, requested_quantity in requested_quantities.items():
                 product = products.get(product_id)
                 if product is None:
                     stock_errors.append(
                         f'El producto {product_id} ya no esta disponible.'
+                    )
+                elif not product.status:
+                    product_errors.append(
+                        f'El producto {product.name} ya no esta disponible.'
                     )
                 elif product.stock < requested_quantity:
                     stock_errors.append(
@@ -68,8 +73,13 @@ class OrderViewSet(
                         f'disponible {product.stock}, solicitado {requested_quantity}.'
                     )
 
-            if stock_errors:
-                raise ValidationError({'stock': stock_errors})
+            if stock_errors or product_errors:
+                errors = {}
+                if stock_errors:
+                    errors['stock'] = stock_errors
+                if product_errors:
+                    errors['product'] = product_errors
+                raise ValidationError(errors)
 
             total = sum(
                 (

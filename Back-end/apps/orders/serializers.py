@@ -40,6 +40,34 @@ class CartItemSerializer(serializers.ModelSerializer):
         source='product',
         write_only=True
     )
+    quantity = serializers.IntegerField(
+        min_value=1,
+        error_messages={
+            'min_value': 'La cantidad debe ser mayor o igual a 1.',
+        },
+    )
+
+    def validate(self, attrs):
+        product = attrs.get('product')
+        if product is None and self.instance is not None:
+            product = self.instance.product
+
+        quantity = attrs.get('quantity')
+        if quantity is None and self.instance is not None:
+            quantity = self.instance.quantity
+
+        errors = {}
+        if product is not None and not product.status:
+            errors['product_id'] = 'El producto no está disponible.'
+        if product is not None and quantity is not None and quantity > product.stock:
+            errors['quantity'] = (
+                'La cantidad solicitada supera el stock disponible.'
+            )
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return attrs
 
     class Meta:
         model = CartItem
