@@ -1,0 +1,68 @@
+/# Python
+*.py[cod]
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Django
+# SQLite database
+db.sqlite3
+
+# Media and static files (adjust if you track them intentionally)
+media/
+static/
+staticfiles/
+static_root/
+
+# Logs
+*.log
+
+# Environment variables
+.env
+.env.*
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Docker
+# ignore local compose override containing secrets
+docker-compose.override.yml
+
+# Misc
+coverage.xml
+celerybeat-schedule
+instance/
+.webassets-cache
+
+# Prevent accidentally committing migrations cache
+**/migrations/__pycache__/
