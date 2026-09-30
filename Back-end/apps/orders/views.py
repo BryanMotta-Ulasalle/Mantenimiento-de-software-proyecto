@@ -2,11 +2,20 @@ from decimal import Decimal
 
 from django.db import transaction
 from rest_framework import viewsets, mixins
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
 from apps.products.models import Product
 from .models import Order, OrderItem, Cart, CartItem
-from .serializers import OrderSerializer, OrderItemSerializer, CartSerializer, CartItemSerializer
+from .serializers import (
+    OrderSerializer,
+    OrderItemSerializer,
+    OrderStatusSerializer,
+    CartSerializer,
+    CartItemSerializer,
+)
+from apps.users.permissions import IsAdmin
 
 
 def _is_admin_user(user):
@@ -28,6 +37,20 @@ class OrderViewSet(
         if _is_admin_user(self.request.user):
             return queryset
         return queryset.filter(user=self.request.user)
+
+    @action(
+        detail=True,
+        methods=['patch'],
+        url_path='status',
+        url_name='status',
+        permission_classes=[IsAdmin],
+    )
+    def update_status(self, request, pk=None):
+        order = self.get_object()
+        serializer = OrderStatusSerializer(order, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
     
     def perform_create(self, serializer):
         user = self.request.user

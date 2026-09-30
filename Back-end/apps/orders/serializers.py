@@ -26,6 +26,38 @@ class OrderSerializer(serializers.ModelSerializer):
             'created_at',
         )
         read_only_fields = ('total_price', 'status', 'user', 'created_at')
+
+
+class OrderStatusSerializer(serializers.ModelSerializer):
+    ALLOWED_TRANSITIONS = {
+        Order.Status.PENDING: {
+            Order.Status.PROCESSING,
+            Order.Status.CANCELLED,
+        },
+        Order.Status.PROCESSING: {
+            Order.Status.COMPLETED,
+            Order.Status.CANCELLED,
+        },
+        Order.Status.COMPLETED: set(),
+        Order.Status.CANCELLED: set(),
+    }
+
+    def validate_status(self, value):
+        current_status = self.instance.status
+        if value == current_status:
+            return value
+
+        allowed_statuses = self.ALLOWED_TRANSITIONS.get(current_status, set())
+        if value not in allowed_statuses:
+            raise serializers.ValidationError(
+                f'No se puede cambiar de {current_status} a {value}.',
+            )
+
+        return value
+
+    class Meta:
+        model = Order
+        fields = ('status',)
         
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
