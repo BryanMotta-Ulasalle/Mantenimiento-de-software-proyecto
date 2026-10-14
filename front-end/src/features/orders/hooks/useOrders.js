@@ -5,7 +5,9 @@ import { fetchOrders } from "../api/orderApi";
 const useOrders = () => {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let isActive = true;
@@ -26,7 +28,10 @@ const useOrders = () => {
           );
         }
       } finally {
-        if (isActive) setIsLoading(false);
+        if (isActive) {
+          setIsLoading(false);
+          setHasLoaded(true);
+        }
       }
     };
 
@@ -35,9 +40,19 @@ const useOrders = () => {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [reloadKey]);
 
-  return { data: orders, orders, isLoading, error };
+  const refetch = () => setReloadKey((current) => current + 1);
+
+  return {
+    data: orders,
+    orders,
+    isLoading,
+    isInitialLoading: isLoading && !hasLoaded,
+    isRefreshing: isLoading && hasLoaded,
+    error,
+    refetch,
+  };
 };
 
 export default useOrders;

@@ -8,11 +8,18 @@ import TablePrivate from "../../products/components/staff/TablePrivate";
 import { formatProductPrice } from "../../products/utils/productFormatters";
 import useUsersAdmin from "../../users/hooks/useUsersAdmin";
 import OrderDetailModal from "../components/OrderDetailModal";
+import OrderStatusBadge from "../components/OrderStatusBadge";
 import useOrders from "../hooks/useOrders";
 import { formatOrderDate } from "../utils/orderFormatters";
 
 const OrdersPage = () => {
-  const { orders, isLoading, error } = useOrders();
+  const {
+    orders,
+    isInitialLoading,
+    isRefreshing,
+    error,
+    refetch,
+  } = useOrders();
   const {
     users,
     isLoading: usersLoading,
@@ -51,11 +58,7 @@ const OrdersPage = () => {
     {
       key: "status",
       label: "Estado",
-      render: (value) => (
-        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold capitalize text-amber-800">
-          {value}
-        </span>
-      ),
+      render: (value) => <OrderStatusBadge status={value} />,
     },
     {
       key: "total_price",
@@ -87,7 +90,7 @@ const OrdersPage = () => {
     },
   ];
 
-  if (isLoading || usersLoading) {
+  if (isInitialLoading || usersLoading) {
     return <LoadingState message="Cargando ordenes..." />;
   }
 
@@ -96,24 +99,35 @@ const OrdersPage = () => {
       <div>
         <H2>Ordenes</H2>
         <p className="mt-1 text-sm text-stone-500">
-          Consulta pedidos y sus items. El estado es de solo lectura.
+          Consulta pedidos, sus items y actualiza su estado.
         </p>
       </div>
       <ErrorMessage message={error || usersError} />
-      {orders.length === 0 ? (
-        <EmptyState
-          title="No hay ordenes"
-          description="Las compras confirmadas apareceran aqui."
-        />
-      ) : (
-        <TablePrivate columns={columns} data={orders} />
-      )}
+      <div className="relative" aria-busy={isRefreshing}>
+        {isRefreshing && (
+          <span className="absolute right-3 top-3 z-10 rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white shadow-sm">
+            Actualizando...
+          </span>
+        )}
+        <div className={isRefreshing ? "opacity-60 transition-opacity" : ""}>
+          {orders.length === 0 ? (
+            <EmptyState
+              title="No hay ordenes"
+              description="Las compras confirmadas apareceran aqui."
+            />
+          ) : (
+            <TablePrivate columns={columns} data={orders} />
+          )}
+        </div>
+      </div>
 
       {selectedOrder && (
         <OrderDetailModal
           orderId={selectedOrder.id}
           customerName={getCustomerName(selectedOrder.user)}
           onClose={() => setSelectedOrder(null)}
+          canEditStatus
+          onStatusUpdated={refetch}
         />
       )}
     </section>

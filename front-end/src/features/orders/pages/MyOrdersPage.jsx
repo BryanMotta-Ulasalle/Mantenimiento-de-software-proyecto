@@ -4,6 +4,7 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import H2 from "../../../components/H2";
 import LoadingState from "../../../components/LoadingState";
 import { formatProductPrice } from "../../products/utils/productFormatters";
+import OrderStatusBadge from "../components/OrderStatusBadge";
 import useOrders from "../hooks/useOrders";
 import { formatOrderDate } from "../utils/orderFormatters";
 
@@ -54,9 +55,10 @@ const MyOrdersPage = () => {
                   </p>
                 </div>
                 <div className="text-right">
-                  <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-medium capitalize text-amber-800">
-                    {order.status}
-                  </span>
+                  <OrderStatusBadge
+                    status={order.status}
+                    className="text-sm font-medium"
+                  />
                   <p className="mt-3 text-xl font-bold">
                     {formatProductPrice(order.total_price)}
                   </p>

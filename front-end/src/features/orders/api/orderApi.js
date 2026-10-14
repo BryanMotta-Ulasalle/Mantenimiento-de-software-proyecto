@@ -20,3 +20,12 @@ export const createOrder = async (shippingAddress) => {
   );
   return data;
 };
+
+export const updateOrderStatus = async (orderId, status) => {
+  const { data } = await apiClient.patch(
+    `/orders/${orderId}/status/`,
+    { status },
+    { withAuth: true },
+  );
+  return data;
+};

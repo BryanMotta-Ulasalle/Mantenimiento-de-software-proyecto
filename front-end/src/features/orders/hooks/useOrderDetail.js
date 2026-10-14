@@ -6,6 +6,7 @@ const useOrderDetail = (orderId) => {
   const [order, setOrder] = useState(null);
   const [isLoading, setIsLoading] = useState(Boolean(orderId));
   const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!orderId) return undefined;
@@ -34,13 +35,16 @@ const useOrderDetail = (orderId) => {
     return () => {
       isActive = false;
     };
-  }, [orderId]);
+  }, [orderId, reloadKey]);
+
+  const refetch = () => setReloadKey((current) => current + 1);
 
   return {
     data: orderId ? order : null,
     order: orderId ? order : null,
     isLoading: orderId ? isLoading : false,
     error: orderId ? error : null,
+    refetch,
   };
 };
 
