@@ -3,18 +3,30 @@ import ErrorMessage from "../../../../components/ErrorMessage";
 import LoadingState from "../../../../components/LoadingState";
 import useAuth from "../../../../hooks/useAuth";
 import useAddToCart from "../../../orders/hooks/useAddToCart";
+import ProductReviews from "../../components/customer/ProductReviews";
 import OneProductCard from "../../components/customer/OneProductCard";
+import useProductReviews from "../../hooks/useProductReviews";
 import useProductById from "../../hooks/useProductById";
 
 const OneProductPage = () => {
   const { id } = useParams();
   const { product, isLoading, error } = useProductById(id);
   const {
+    reviews,
+    ownReview,
+    averageRating,
+    isLoading: reviewsLoading,
+    isSaving: isSavingReview,
+    error: reviewsError,
+    saveReview,
+    removeReview,
+  } = useProductReviews(id);
+  const {
     addToCart,
     isLoading: isAdding,
     error: addError,
   } = useAddToCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isCustomer } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,6 +59,19 @@ const OneProductPage = () => {
         isAdding={isAdding}
       />
       <ErrorMessage message={addError} className="mx-5 mb-8" />
+      <ProductReviews
+        productId={product.id}
+        isAuthenticated={isAuthenticated}
+        isCustomer={isCustomer}
+        reviews={reviews}
+        ownReview={ownReview}
+        averageRating={averageRating}
+        isLoading={reviewsLoading}
+        isSaving={isSavingReview}
+        error={reviewsError}
+        saveReview={saveReview}
+        removeReview={removeReview}
+      />
     </section>
   );
 };

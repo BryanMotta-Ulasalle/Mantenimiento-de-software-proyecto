@@ -64,3 +64,39 @@ class Favorite(models.Model):
                 name='unique_user_favorite_product',
             ),
         ]
+
+
+class ProductReview(models.Model):
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='product_reviews',
+        db_column='user_id',
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        db_column='product_id',
+    )
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'{self.product.name} - {self.rating}/5 ({self.user.email})'
+
+    class Meta:
+        db_table = 'product_reviews'
+        ordering = ('-created_at', '-id')
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'product'),
+                name='unique_user_product_review',
+            ),
+            models.CheckConstraint(
+                condition=models.Q(rating__gte=1, rating__lte=5),
+                name='product_review_rating_between_1_and_5',
+            ),
+        ]

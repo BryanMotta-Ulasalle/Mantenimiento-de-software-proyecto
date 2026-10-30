@@ -1,10 +1,16 @@
 from rest_framework import mixins, status, viewsets
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import Category, Favorite, Product
-from .serializers import CategorySerializer, FavoriteSerializer, ProductSerializer
+from apps.orders.models import Order, OrderItem
+from .models import Category, Favorite, Product, ProductReview
+from .serializers import (
+    CategorySerializer,
+    FavoriteSerializer,
+    ProductReviewSerializer,
+    ProductSerializer,
+)
 from apps.users.permissions import IsAdminOrEmployee, IsCustomer
 from django.db.models import Count
 
@@ -117,4 +123,52 @@ class FavoriteViewSet(
             status.HTTP_201_CREATED if created else status.HTTP_200_OK
         )
         return Response(response_serializer.data, status=response_status)
+
+
+class ProductReviewViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = ProductReviewSerializer
+    queryset = ProductReview.objects.select_related('user', 'product')
+
+    def get_permissions(self):
+        if self.action == 'list':
+            return [AllowAny()]
+        return [IsCustomer()]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == 'list':
+            product_id = self.request.query_params.get('product')
+            if not product_id:
+                raise ValidationError({'product': 'Este parámetro es obligatorio.'})
+            try:
+                product_id = int(product_id)
+            except ValueError as error:
+                raise ValidationError(
+                    {'product': 'Debe ser un identificador numérico válido.'}
+                ) from error
+
+            if not Product.objects.filter(id=product_id, status=True).exists():
+                raise NotFound('No se encontró el producto solicitado.')
+            return queryset.filter(product_id=product_id)
+
+        return queryset.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        product = serializer.validated_data['product']
+        has_completed_purchase = OrderItem.objects.filter(
+            product=product,
+            order__user=self.request.user,
+            order__status=Order.Status.COMPLETED,
+        ).exists()
+        if not has_completed_purchase:
+            raise ValidationError(
+                {'product_id': 'Solo puedes reseñar productos de pedidos completados.'}
+            )
+        serializer.save(user=self.request.user)
  

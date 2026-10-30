@@ -7,7 +7,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.products.models import Category, Favorite, Product
+from apps.orders.models import Order, OrderItem
+from apps.products.models import Category, Favorite, Product, ProductReview
 from apps.users.models import Role, User
 
 
@@ -580,4 +581,225 @@ class FavoriteApiTests(APITestCase):
 
         with self.assertRaises(IntegrityError), transaction.atomic():
             Favorite.objects.create(user=self.customer, product=self.product)
+
+
+class ProductReviewApiTests(APITestCase):
+    def setUp(self):
+        self.customer_role, _ = Role.objects.get_or_create(
+            id=3,
+            defaults={'name': 'Customer'},
+        )
+        self.other_customer_role, _ = Role.objects.get_or_create(name='Customer')
+        self.admin_role, _ = Role.objects.get_or_create(name='Admin')
+        self.employee_role, _ = Role.objects.get_or_create(name='Employee')
+        self.customer = self.create_user('review-customer@example.com', self.customer_role)
+        self.other_customer = self.create_user(
+            'review-other@example.com',
+            self.other_customer_role,
+        )
+        self.admin = self.create_user('review-admin@example.com', self.admin_role)
+        self.employee = self.create_user(
+            'review-employee@example.com',
+            self.employee_role,
+        )
+        self.category = Category.objects.create(name='Reseñas')
+        self.product = Product.objects.create(
+            category=self.category,
+            name='Producto reseñable',
+            description='Producto de prueba',
+            price=Decimal('50.00'),
+            stock=5,
+            status=True,
+        )
+        self.list_url = reverse('product-review-list')
+        self.completed_order = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.COMPLETED,
+            total_price=Decimal('50.00'),
+            shipping_address='Dirección de prueba',
+        )
+        OrderItem.objects.create(
+            order=self.completed_order,
+            product=self.product,
+            quantity=1,
+            unit_price=Decimal('50.00'),
+        )
+
+    @staticmethod
+    def create_user(email, role):
+        return User.objects.create_user(
+            email=email,
+            password='Password123',
+            name=role.name,
+            role=role,
+        )
+
+    def create_review(self, user=None, product=None, rating=5, comment='Excelente'):
+        return ProductReview.objects.create(
+            user=user or self.customer,
+            product=product or self.product,
+            rating=rating,
+            comment=comment,
+        )
+
+    def test_reviews_are_publicly_listed_for_active_product(self):
+        review = self.create_review()
+
+        response = self.client.get(self.list_url, {'product': self.product.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['id'], review.id)
+        self.assertEqual(response.data[0]['user_name'], self.customer.name)
+        self.assertFalse(response.data[0]['is_mine'])
+
+    def test_product_parameter_is_required_and_product_must_be_active(self):
+        no_product = self.client.get(self.list_url)
+        self.product.status = False
+        self.product.save(update_fields=['status'])
+        inactive_product = self.client.get(
+            self.list_url,
+            {'product': self.product.id},
+        )
+
+        self.assertEqual(no_product.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(inactive_product.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_customer_with_completed_purchase_can_create_review(self):
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.post(
+            self.list_url,
+            {
+                'product_id': self.product.id,
+                'rating': 4,
+                'comment': 'Cumple con lo esperado.',
+            },
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['rating'], 4)
+        self.assertTrue(response.data['is_mine'])
+        self.assertTrue(
+            ProductReview.objects.filter(user=self.customer, product=self.product).exists(),
+        )
+
+    def test_customer_cannot_create_a_second_review_for_same_product(self):
+        self.create_review()
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.post(
+            self.list_url,
+            {'product_id': self.product.id, 'rating': 4},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('product_id', response.data)
+        self.assertEqual(ProductReview.objects.count(), 1)
+
+    def test_customer_without_completed_purchase_cannot_review(self):
+        self.completed_order.status = Order.Status.PROCESSING
+        self.completed_order.save(update_fields=['status'])
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.post(
+            self.list_url,
+            {'product_id': self.product.id, 'rating': 5, 'comment': ''},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('product_id', response.data)
+        self.assertFalse(ProductReview.objects.exists())
+
+    def test_anonymous_and_non_customer_users_cannot_create_reviews(self):
+        payload = {'product_id': self.product.id, 'rating': 5, 'comment': ''}
+        anonymous_response = self.client.post(self.list_url, payload, format='json')
+        self.assertEqual(
+            anonymous_response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+        for user in (self.admin, self.employee):
+            with self.subTest(role=user.role.name):
+                self.client.force_authenticate(user=user)
+                response = self.client.post(self.list_url, payload, format='json')
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_rating_must_be_between_one_and_five(self):
+        self.client.force_authenticate(user=self.customer)
+
+        for rating in (0, 6):
+            with self.subTest(rating=rating):
+                response = self.client.post(
+                    self.list_url,
+                    {'product_id': self.product.id, 'rating': rating},
+                    format='json',
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(ProductReview.objects.exists())
+
+    def test_customer_can_edit_and_delete_own_review(self):
+        review = self.create_review(rating=3)
+        self.client.force_authenticate(user=self.customer)
+        detail_url = reverse('product-review-detail', args=[review.id])
+
+        update_response = self.client.patch(
+            detail_url,
+            {'rating': 4, 'comment': 'Actualizada'},
+            format='json',
+        )
+        delete_response = self.client.delete(detail_url)
+
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.data['rating'], 4)
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ProductReview.objects.filter(id=review.id).exists())
+
+    def test_customer_cannot_edit_or_delete_another_users_review(self):
+        review = self.create_review()
+        self.client.force_authenticate(user=self.other_customer)
+        detail_url = reverse('product-review-detail', args=[review.id])
+
+        update_response = self.client.patch(
+            detail_url,
+            {'rating': 2},
+            format='json',
+        )
+        delete_response = self.client.delete(detail_url)
+
+        self.assertEqual(update_response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(delete_response.status_code, status.HTTP_404_NOT_FOUND)
+        review.refresh_from_db()
+        self.assertEqual(review.rating, 5)
+
+    def test_customer_cannot_move_review_to_product_without_completed_purchase(self):
+        review = self.create_review()
+        other_product = Product.objects.create(
+            category=self.category,
+            name='Otro producto',
+            description='Sin compra completada',
+            price=Decimal('10.00'),
+            stock=2,
+            status=True,
+        )
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.patch(
+            reverse('product-review-detail', args=[review.id]),
+            {'product_id': other_product.id, 'rating': 3},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        review.refresh_from_db()
+        self.assertEqual(review.product_id, self.product.id)
+
+    def test_database_prevents_duplicate_reviews_per_customer_and_product(self):
+        self.create_review()
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.create_review()
 
