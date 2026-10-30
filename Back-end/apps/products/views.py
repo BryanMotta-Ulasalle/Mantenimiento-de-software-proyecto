@@ -1,10 +1,11 @@
-from rest_framework import viewsets
+from rest_framework import mixins, status, viewsets
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
-from .models import Category, Product
-from .serializers import CategorySerializer, ProductSerializer
-from apps.users.permissions import IsAdminOrEmployee
+from .models import Category, Favorite, Product
+from .serializers import CategorySerializer, FavoriteSerializer, ProductSerializer
+from apps.users.permissions import IsAdminOrEmployee, IsCustomer
 from django.db.models import Count
 
 
@@ -86,4 +87,34 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAdminOrEmployee()]
+
+
+class FavoriteViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    permission_classes = [IsCustomer]
+    serializer_class = FavoriteSerializer
+    queryset = Favorite.objects.select_related(
+        'user',
+        'product__category',
+    ).prefetch_related('product__product_images').order_by('-created_at', '-id')
+
+    def get_queryset(self):
+        return super().get_queryset().filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user,
+            product=serializer.validated_data['product'],
+        )
+        response_serializer = self.get_serializer(favorite)
+        response_status = (
+            status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+        return Response(response_serializer.data, status=response_status)
  

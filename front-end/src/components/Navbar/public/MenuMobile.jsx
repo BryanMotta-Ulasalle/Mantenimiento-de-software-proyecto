@@ -6,7 +6,7 @@ import H2 from "../../H2";
 import NavBarPublic from "./NavBarPublic";
 
 const MenuMobile = ({ setIsMobileOpen }) => {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isCustomer, logout } = useAuth();
   const navigate = useNavigate();
 
   const closeMenu = () => setIsMobileOpen(false);
@@ -37,6 +37,11 @@ const MenuMobile = ({ setIsMobileOpen }) => {
                 <Link to="/cuenta/ordenes" onClick={closeMenu}>
                   Mis Ordenes
                 </Link>
+                {isCustomer && (
+                  <Link to="/cuenta/favoritos" onClick={closeMenu}>
+                    Mis favoritos
+                  </Link>
+                )}
                 <Link to="/cuenta" onClick={closeMenu}>
                   Perfil
                 </Link>

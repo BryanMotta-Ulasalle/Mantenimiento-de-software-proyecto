@@ -6,6 +6,7 @@ import Inicio from "../features/Home/page/HomePage";
 import OrdersPage from "../features/orders/pages/OrdersPage";
 import CartPage from "../features/orders/pages/CartPage";
 import MyOrdersPage from "../features/orders/pages/MyOrdersPage";
+import FavoritesPage from "../features/favorites/pages/FavoritesPage";
 import OneProductPage from "../features/products/pages/customer/OneProductPage";
 import ProductsCustomers from "../features/products/pages/customer/ProductsPage";
 import CategoriesPage from "../features/products/pages/staff/CategoriesPage";
@@ -51,6 +52,14 @@ const AppRouter = () => {
             <PrivateRoute>
               <MyOrdersPage />
             </PrivateRoute>
+          }
+        />
+        <Route
+          path="/cuenta/favoritos"
+          element={
+            <RoleRoute allow={["Customer"]}>
+              <FavoritesPage />
+            </RoleRoute>
           }
         />
       </Route>

@@ -4,6 +4,10 @@ import ProductCard from "../shared/ProductCard";
 const ProductGrid = ({
   products,
   onAddToCart,
+  onToggleFavorite,
+  favoriteByProductId = {},
+  pendingProductIds = new Set(),
+  favoritesLoading = false,
   emptyTitle = "No hay productos disponibles",
   emptyDescription = "Vuelve a intentarlo mas tarde.",
 }) => {
@@ -23,6 +27,11 @@ const ProductGrid = ({
           key={product.id}
           product={product}
           onAddToCart={onAddToCart}
+          onToggleFavorite={onToggleFavorite}
+          isFavorite={Boolean(favoriteByProductId[product.id])}
+          favoriteDisabled={
+            favoritesLoading || pendingProductIds.has(product.id)
+          }
         />
       ))}
     </div>

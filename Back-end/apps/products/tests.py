@@ -1,12 +1,13 @@
 from decimal import Decimal
 from datetime import datetime
 
+from django.db import IntegrityError, transaction
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from apps.products.models import Category, Product
+from apps.products.models import Category, Favorite, Product
 from apps.users.models import Role, User
 
 
@@ -402,4 +403,181 @@ class ProductOrderingTests(APITestCase):
                 self.zeta.id,
             ],
         )
+
+
+class FavoriteApiTests(APITestCase):
+    def setUp(self):
+        self.customer_role, _ = Role.objects.get_or_create(
+            id=3,
+            defaults={'name': 'Customer'},
+        )
+        self.other_customer_role, _ = Role.objects.get_or_create(
+            name='Customer',
+        )
+        self.admin_role, _ = Role.objects.get_or_create(name='Admin')
+        self.employee_role, _ = Role.objects.get_or_create(name='Employee')
+        self.customer = self.create_user('favorite-customer@example.com', self.customer_role)
+        self.other_customer = self.create_user(
+            'favorite-other@example.com',
+            self.other_customer_role,
+        )
+        self.admin = self.create_user('favorite-admin@example.com', self.admin_role)
+        self.employee = self.create_user(
+            'favorite-employee@example.com',
+            self.employee_role,
+        )
+        self.category = Category.objects.create(name='Categoria')
+        self.product = Product.objects.create(
+            category=self.category,
+            name='Producto favorito',
+            description='Producto para probar favoritos',
+            price=Decimal('45.00'),
+            stock=4,
+            status=True,
+        )
+        self.inactive_product = Product.objects.create(
+            category=self.category,
+            name='Producto desactivado',
+            description='Producto para probar disponibilidad',
+            price=Decimal('20.00'),
+            stock=2,
+            status=False,
+        )
+        self.list_url = reverse('favorite-list')
+
+    @staticmethod
+    def create_user(email, role):
+        return User.objects.create_user(
+            email=email,
+            password='Password123',
+            name=role.name,
+            role=role,
+        )
+
+    def test_anonymous_user_cannot_list_or_create_favorites(self):
+        list_response = self.client.get(self.list_url)
+        create_response = self.client.post(
+            self.list_url,
+            {'product_id': self.product.id},
+            format='json',
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(create_response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_only_customers_can_use_favorites(self):
+        for user in (self.admin, self.employee):
+            with self.subTest(role=user.role.name):
+                self.client.force_authenticate(user=user)
+                response = self.client.get(self.list_url)
+                self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_customer_can_add_and_list_a_favorite(self):
+        self.client.force_authenticate(user=self.customer)
+
+        create_response = self.client.post(
+            self.list_url,
+            {'product_id': self.product.id},
+            format='json',
+        )
+        list_response = self.client.get(self.list_url)
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.data['product']['id'], self.product.id)
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(list_response.data[0]['product']['name'], 'Producto favorito')
+
+    def test_adding_the_same_favorite_is_idempotent(self):
+        self.client.force_authenticate(user=self.customer)
+        payload = {'product_id': self.product.id}
+
+        first_response = self.client.post(self.list_url, payload, format='json')
+        second_response = self.client.post(self.list_url, payload, format='json')
+
+        self.assertEqual(first_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            Favorite.objects.filter(user=self.customer, product=self.product).count(),
+            1,
+        )
+
+    def test_customer_cannot_add_inactive_product(self):
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.post(
+            self.list_url,
+            {'product_id': self.inactive_product.id},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('product_id', response.data)
+        self.assertFalse(
+            Favorite.objects.filter(
+                user=self.customer,
+                product=self.inactive_product,
+            ).exists(),
+        )
+
+    def test_favorites_are_isolated_by_customer(self):
+        Favorite.objects.create(user=self.customer, product=self.product)
+        self.client.force_authenticate(user=self.other_customer)
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_customer_cannot_delete_another_customers_favorite(self):
+        favorite = Favorite.objects.create(
+            user=self.customer,
+            product=self.product,
+        )
+        self.client.force_authenticate(user=self.other_customer)
+
+        response = self.client.delete(
+            reverse('favorite-detail', args=[favorite.id]),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(Favorite.objects.filter(id=favorite.id).exists())
+
+    def test_customer_can_remove_own_favorite(self):
+        favorite = Favorite.objects.create(
+            user=self.customer,
+            product=self.product,
+        )
+        self.client.force_authenticate(user=self.customer)
+
+        response = self.client.delete(
+            reverse('favorite-detail', args=[favorite.id]),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Favorite.objects.filter(id=favorite.id).exists())
+
+    def test_inactive_product_remains_listed_and_can_be_removed(self):
+        favorite = Favorite.objects.create(
+            user=self.customer,
+            product=self.product,
+        )
+        self.product.status = False
+        self.product.save(update_fields=['status'])
+        self.client.force_authenticate(user=self.customer)
+
+        list_response = self.client.get(self.list_url)
+        delete_response = self.client.delete(
+            reverse('favorite-detail', args=[favorite.id]),
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertFalse(list_response.data[0]['product']['status'])
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_database_prevents_duplicate_customer_product_pair(self):
+        Favorite.objects.create(user=self.customer, product=self.product)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Favorite.objects.create(user=self.customer, product=self.product)
 

@@ -1,3 +1,4 @@
+import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/Button";
 import {
@@ -7,7 +8,14 @@ import {
 import { getMainProductImage } from "../../utils/productImages";
 import ProductImage from "./ProductImage";
 
-const ProductCard = ({ product, onAddToCart, actions }) => {
+const ProductCard = ({
+  product,
+  onAddToCart,
+  onToggleFavorite,
+  isFavorite = false,
+  favoriteDisabled = false,
+  actions,
+}) => {
   const available = isProductAvailable(product);
 
   return (
@@ -50,20 +58,37 @@ const ProductCard = ({ product, onAddToCart, actions }) => {
           Stock: {Number(product.stock || 0)}
         </p>
 
-        <div className="mt-auto flex items-center justify-between gap-3 pt-3">
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="text-lg font-bold text-stone-900">
             {formatProductPrice(product.price)}
           </span>
-          {onAddToCart && (
-            <Button
-              color="black"
-              size="sm"
-              disabled={!available}
-              onClick={() => onAddToCart(product.id)}
-            >
-              Agregar
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {onToggleFavorite && (
+              <button
+                type="button"
+                disabled={favoriteDisabled}
+                onClick={() => onToggleFavorite(product.id)}
+                aria-label={`${isFavorite ? "Quitar" : "Agregar"} ${product.name} ${isFavorite ? "de" : "a"} favoritos`}
+                aria-pressed={isFavorite}
+                className="rounded-xl p-2 text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Heart
+                  className="h-5 w-5"
+                  fill={isFavorite ? "currentColor" : "none"}
+                />
+              </button>
+            )}
+            {onAddToCart && (
+              <Button
+                color="black"
+                size="sm"
+                disabled={!available}
+                onClick={() => onAddToCart(product.id)}
+              >
+                Agregar
+              </Button>
+            )}
+          </div>
           {actions}
         </div>
       </div>

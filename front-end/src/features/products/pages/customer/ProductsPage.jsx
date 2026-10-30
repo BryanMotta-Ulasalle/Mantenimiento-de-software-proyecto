@@ -3,6 +3,7 @@ import ErrorMessage from "../../../../components/ErrorMessage";
 import LoadingState from "../../../../components/LoadingState";
 import useAuth from "../../../../hooks/useAuth";
 import useAddToCart from "../../../orders/hooks/useAddToCart";
+import useFavorites from "../../../favorites/hooks/useFavorites";
 import ProductFilters from "../../components/shared/ProductFilters";
 import ProductGrid from "../../components/customer/ProductGrid";
 import useCategory from "../../../Home/hooks/useCategory";
@@ -36,7 +37,14 @@ const ProductsPage = () => {
     addToCart,
     error: addError,
   } = useAddToCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isCustomer } = useAuth();
+  const {
+    favoriteByProductId,
+    pendingProductIds,
+    isLoading: favoritesLoading,
+    error: favoriteError,
+    toggleFavorite,
+  } = useFavorites();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -52,6 +60,21 @@ const ProductsPage = () => {
       await addToCart(productId);
     } catch {
       // El hook expone el mensaje debajo del catalogo.
+    }
+  };
+
+  const handleToggleFavorite = async (productId) => {
+    if (!isCustomer) {
+      navigate("/login", {
+        state: { from: `${location.pathname}${location.search}` },
+      });
+      return;
+    }
+
+    try {
+      await toggleFavorite(productId);
+    } catch {
+      // El hook expone el error junto al catalogo.
     }
   };
 
@@ -76,7 +99,10 @@ const ProductsPage = () => {
           orderingOptions={CUSTOMER_ORDERING_OPTIONS}
         />
       </div>
-      <ErrorMessage message={error || categoriesError} className="mx-5 mt-5" />
+      <ErrorMessage
+        message={error || categoriesError || favoriteError}
+        className="mx-5 mt-5"
+      />
       <div className="relative" aria-busy={isRefreshing}>
         {isRefreshing && (
           <span className="absolute right-8 top-4 z-10 rounded-full bg-stone-900 px-3 py-1 text-xs font-medium text-white shadow-sm">
@@ -87,6 +113,12 @@ const ProductsPage = () => {
           <ProductGrid
             products={products}
             onAddToCart={handleAddToCart}
+            onToggleFavorite={
+              !isAuthenticated || isCustomer ? handleToggleFavorite : undefined
+            }
+            favoriteByProductId={favoriteByProductId}
+            pendingProductIds={pendingProductIds}
+            favoritesLoading={favoritesLoading}
             emptyTitle="No se encontraron productos"
             emptyDescription="No se encontraron productos con los filtros seleccionados."
           />

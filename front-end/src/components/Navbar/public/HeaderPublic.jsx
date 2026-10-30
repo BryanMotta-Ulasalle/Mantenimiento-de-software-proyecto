@@ -16,7 +16,7 @@ const HeaderPublic = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const isHome = location.pathname === "/";
-  const { isAuthenticated, isAdmin, logout, user, isEmployee } = useAuth();
+  const { isAuthenticated, isAdmin, isCustomer, logout, user, isEmployee } = useAuth();
   const { itemCount } = useCart();
 
   const handleLogout = () => {
@@ -81,6 +81,7 @@ const HeaderPublic = () => {
                   handleLogout={handleLogout}
                   isAdmin={isAdmin}
                   isEmployee={isEmployee}
+                  isCustomer={isCustomer}
                 />
               )}
             </div>

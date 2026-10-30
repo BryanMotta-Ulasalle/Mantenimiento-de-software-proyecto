@@ -2,7 +2,7 @@ import P from '../../P';
 import H5 from './../../H5';
 import { Link } from 'react-router-dom';
 
-const AccountList = ({ name, email, role, handleLogout, isAdmin, isEmployee}) => {
+const AccountList = ({ name, email, role, handleLogout, isAdmin, isEmployee, isCustomer}) => {
     return (
         <div className='absolute right-0 top-12 w-60 flex flex-col gap-5 bg-white rounded-2xl shadow-2xl p-5 text-stone-900'>
             <div className='flex flex-col'>
@@ -22,6 +22,7 @@ const AccountList = ({ name, email, role, handleLogout, isAdmin, isEmployee}) =>
                     )
                 }
                 <Link to="/cuenta/ordenes">Mis Ordenes</Link>
+                {isCustomer && <Link to="/cuenta/favoritos">Mis favoritos</Link>}
                 <Link to="/cuenta">Perfil</Link>
             </div>
             <div>

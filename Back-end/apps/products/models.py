@@ -36,3 +36,31 @@ class ProductImage(models.Model):
     
     class Meta:
         db_table = 'product_images'
+
+
+class Favorite(models.Model):
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='favorites',
+        db_column='user_id',
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='favorited_by',
+        db_column='product_id',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.user.email} - {self.product.name}'
+
+    class Meta:
+        db_table = 'favorites'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('user', 'product'),
+                name='unique_user_favorite_product',
+            ),
+        ]
