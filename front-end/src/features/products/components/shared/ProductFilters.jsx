@@ -6,6 +6,7 @@ const ProductFilters = ({
   filters,
   categories,
   onChange,
+  onCategoryChange,
   onClear,
   showStatus = false,
   showStock = false,
@@ -24,6 +25,14 @@ const ProductFilters = ({
   const updateFilter = (event) => {
     const { name, value } = event.target;
     onChange((current) => ({ ...current, [name]: value }));
+  };
+
+  const updateCategory = (event) => {
+    if (onCategoryChange) {
+      onCategoryChange(event.target.value);
+    } else {
+      updateFilter(event);
+    }
   };
 
   const updateSearch = (event) => {
@@ -62,7 +71,7 @@ const ProductFilters = ({
             id="product-category-filter"
             name="category"
             value={filters.category}
-            onChange={updateFilter}
+            onChange={updateCategory}
             className="rounded-xl border border-gray-200 bg-white px-4 py-3"
           >
             <option value="">Todas las categorías</option>

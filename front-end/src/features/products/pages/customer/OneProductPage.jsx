@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import LoadingState from "../../../../components/LoadingState";
 import useAuth from "../../../../hooks/useAuth";
@@ -53,6 +53,24 @@ const OneProductPage = () => {
 
   return (
     <section>
+      {product.category?.id && (
+        <nav aria-label="Ruta del producto" className="px-5 pt-6 lg:px-12">
+          <ol className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+            <li className="min-w-0 wrap-anywhere">
+              <Link
+                to={`/tienda/productos?category=${product.category.id}`}
+                className="font-medium text-stone-700 underline-offset-4 hover:underline"
+              >
+                {product.category.name}
+              </Link>
+            </li>
+            <li aria-current="page" className="min-w-0 wrap-anywhere text-stone-900">
+              <span aria-hidden="true" className="mr-2 text-stone-500">&gt;</span>
+              {product.name}
+            </li>
+          </ol>
+        </nav>
+      )}
       <OneProductCard
         product={product}
         onAddToCart={handleAddToCart}

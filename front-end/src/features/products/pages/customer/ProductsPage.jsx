@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import ErrorMessage from "../../../../components/ErrorMessage";
 import LoadingState from "../../../../components/LoadingState";
 import useAuth from "../../../../hooks/useAuth";
@@ -20,13 +20,14 @@ const CUSTOMER_ORDERING_OPTIONS = [
   { value: "created_at", label: "Más antiguos" },
 ];
 
+const DEFAULT_FILTERS = { search: "", is_active: "true", ordering: "" };
+
 const ProductsPage = () => {
-  const [filters, setFilters] = useState({
-    search: "",
-    category: "",
-    is_active: "true",
-    ordering: "",
-  });
+  const [productFilters, setProductFilters] = useState(DEFAULT_FILTERS);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get("category") ?? "";
+  const category = /^[1-9]\d*$/.test(categoryParam) ? categoryParam : "";
+  const filters = { ...productFilters, category };
   const { products, isInitialLoading, isRefreshing, error } = useProducts(filters);
   const {
     categories,
@@ -48,10 +49,22 @@ const ProductsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const updateCategory = (nextCategory) => {
+    if (nextCategory === categoryParam) return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextCategory) {
+      nextParams.set("category", nextCategory);
+    } else {
+      nextParams.delete("category");
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
   const handleAddToCart = async (productId) => {
     if (!isAuthenticated) {
       navigate("/login", {
-        state: { from: location.pathname },
+        state: { from: `${location.pathname}${location.search}` },
       });
       return;
     }
@@ -87,15 +100,12 @@ const ProductsPage = () => {
         <ProductFilters
           filters={filters}
           categories={categories}
-          onChange={setFilters}
-          onClear={() =>
-            setFilters({
-              search: "",
-              category: "",
-              is_active: "true",
-              ordering: "",
-            })
-          }
+          onChange={setProductFilters}
+          onCategoryChange={updateCategory}
+          onClear={() => {
+            setProductFilters(DEFAULT_FILTERS);
+            updateCategory("");
+          }}
           orderingOptions={CUSTOMER_ORDERING_OPTIONS}
         />
       </div>

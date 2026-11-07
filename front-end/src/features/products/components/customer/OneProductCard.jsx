@@ -19,7 +19,7 @@ const OneProductCard = ({ product, onAddToCart, isAdding }) => {
   const available = isProductAvailable(product);
 
   return (
-    <article className="grid gap-10 px-5 py-10 lg:grid-cols-2 lg:px-12 lg:py-16">
+    <article className="grid gap-10 px-5 pt-5 pb-10 lg:grid-cols-2 lg:px-12 lg:pt-7 lg:pb-16">
       <div className="flex flex-col gap-4">
         <ProductImage
           src={selectedImage}
