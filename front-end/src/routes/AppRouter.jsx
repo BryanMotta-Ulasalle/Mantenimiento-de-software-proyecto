@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import Login from "../features/Autentication/pages/Login";
+import PasswordResetPage from "../features/Autentication/pages/PasswordResetPage";
 import Register from "../features/Autentication/pages/Register";
 import DashboardPage from "../features/dashboard/page/DashboardPage";
 import Inicio from "../features/Home/page/HomePage";
@@ -66,6 +67,8 @@ const AppRouter = () => {
 
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/recuperar-cuenta" element={<PasswordResetPage key="request" />} />
+      <Route path="/restablecer-contrasena" element={<PasswordResetPage key="confirm" isConfirmation />} />
 
       <Route
         element={

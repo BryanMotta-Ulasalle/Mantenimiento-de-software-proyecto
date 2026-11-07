@@ -188,6 +188,24 @@ Deberias obtener algo equivalente a:
 ]
 ```
 
+## Recuperación de contraseña
+
+En desarrollo, al solicitar un enlace desde «¿Olvidaste tu contraseña?», Django imprime el correo en su terminal. El enlace vence a los 30 minutos y apunta a `http://localhost:5173` por defecto. Configura `FRONTEND_URL` en `.env` si la tienda usa otra dirección.
+
+Para entregar correos reales, configura los datos de tu proveedor SMTP y una clave privada de Django en `.env`.
+
+```ini
+FRONTEND_URL=https://tienda.example.com
+SECRET_KEY=<clave-privada-de-django>
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=<usuario-smtp>
+EMAIL_HOST_PASSWORD=<clave-smtp>
+DEFAULT_FROM_EMAIL=cuentas@example.com
+```
+
 ## Comandos utiles
 
 ```bash

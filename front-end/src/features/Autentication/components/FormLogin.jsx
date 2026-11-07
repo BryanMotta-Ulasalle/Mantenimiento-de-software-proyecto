@@ -45,6 +45,9 @@ const FormLogin = ({
           placeholder="********"
           required
         />
+        <ButtonLink to="/recuperar-cuenta" color="black" className="self-end text-sm">
+          ¿Olvidaste tu contraseña?
+        </ButtonLink>
         <Button
           disabled={isLoading}
           type="submit"

@@ -22,7 +22,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!kb3l8n6v*^2gs)mi2@!lrk)o*$j@78@77^da3ezsz1hzzs*7p'
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+    SECRET_KEY = config('SECRET_KEY')
+else:
+    SECRET_KEY = config('SECRET_KEY', default='django-insecure-!kb3l8n6v*^2gs)mi2@!lrk)o*$j@78@77^da3ezsz1hzzs*7p')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -140,6 +144,17 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "users.User"
 
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173').rstrip('/')
+PASSWORD_RESET_TIMEOUT = 30 * 60
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='no-reply@example.com')
+EMAIL_HOST = config('EMAIL_HOST', default='localhost')
+EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_TIMEOUT = 10
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -150,6 +165,10 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': (
         'drf_spectacular.openapi.AutoSchema'
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'password_reset_request': '5/hour',
+        'password_reset_confirm': '10/hour',
+    },
 }
 
 
