@@ -34,3 +34,26 @@ export const deleteProduct = async (productId) => {
   return productId;
 };
 
+export const uploadProductImage = async (productId, formData) => {
+  const { data } = await apiClient.postForm(`/products/${productId}/images/`, formData, {
+    withAuth: true,
+  });
+  return data;
+};
+
+export const setPrimaryProductImage = async (productId, imageId) => {
+  const { data } = await apiClient.patch(
+    `/products/${productId}/images/${imageId}/primary/`,
+    null,
+    { withAuth: true },
+  );
+  return data;
+};
+
+export const deleteProductImage = async (productId, imageId) => {
+  const { data } = await apiClient.delete(`/products/${productId}/images/${imageId}/`, {
+    withAuth: true,
+  });
+  return data;
+};
+

@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 
-const Modal = ({ title, children, onClose }) => {
+const Modal = ({ title, children, onClose, closeDisabled = false }) => {
   return (
     <div
       className="fixed inset-0 z-200 flex items-center justify-center bg-black/50 p-4"
@@ -14,7 +14,8 @@ const Modal = ({ title, children, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="cursor-pointer rounded-lg p-2 text-stone-500 hover:bg-stone-100"
+            disabled={closeDisabled}
+            className="rounded-lg p-2 text-stone-500 enabled:cursor-pointer enabled:hover:bg-stone-100 disabled:opacity-50"
             aria-label="Cerrar"
           >
             <X className="h-5 w-5" />

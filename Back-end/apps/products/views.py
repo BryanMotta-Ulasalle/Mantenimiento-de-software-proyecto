@@ -1,18 +1,25 @@
+from django.db import transaction
+from django.db.models import Count
+from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.generics import get_object_or_404
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.orders.models import Order, OrderItem
-from .models import Category, Favorite, Product, ProductReview
+from apps.users.permissions import IsAdminOrEmployee, IsCustomer
+from .models import Category, Favorite, Product, ProductImage, ProductReview
 from .serializers import (
     CategorySerializer,
     FavoriteSerializer,
+    ProductImageSerializer,
+    ProductImageUploadSerializer,
     ProductReviewSerializer,
     ProductSerializer,
 )
-from apps.users.permissions import IsAdminOrEmployee, IsCustomer
-from django.db.models import Count
 
 
 ALLOWED_ORDERING = {
@@ -93,6 +100,78 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [AllowAny()]
         return [IsAdminOrEmployee()]
+
+    @extend_schema(responses={201: ProductImageSerializer(many=True)})
+    @action(
+        detail=True,
+        methods=['post'],
+        url_path='images',
+        parser_classes=[MultiPartParser],
+        serializer_class=ProductImageUploadSerializer,
+    )
+    def upload_image(self, request, pk=None):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        image = ProductImage(image_file=serializer.validated_data['image_file'])
+        image_file = image.image_file
+        stored_name = None
+
+        try:
+            with transaction.atomic():
+                product = get_object_or_404(Product.objects.select_for_update(), pk=pk)
+                images = product.product_images
+                image.product = product
+                image.is_main = serializer.validated_data['is_main'] or not images.exists()
+                if image.is_main:
+                    images.filter(is_main=True).update(is_main=False)
+
+                image_file.save(image_file.name, image_file.file, save=False)
+                stored_name = image_file.name
+                image.save()
+                response = self._product_images_response(images, status.HTTP_201_CREATED)
+        except Exception:
+            if stored_name:
+                image_file.storage.delete(stored_name)
+            raise
+
+        return response
+
+    @extend_schema(request=None, responses=ProductImageSerializer(many=True))
+    @action(detail=True, methods=['patch'], url_path=r'images/(?P<image_id>[0-9]+)/primary')
+    def set_primary_image(self, request, pk=None, image_id=None):
+        with transaction.atomic():
+            product = get_object_or_404(Product.objects.select_for_update(), pk=pk)
+            images = product.product_images
+            image = get_object_or_404(images.all(), pk=image_id)
+            images.filter(is_main=True).exclude(pk=image.pk).update(is_main=False)
+            if not image.is_main:
+                image.is_main = True
+                image.save(update_fields=['is_main'])
+
+            return self._product_images_response(images)
+
+    @extend_schema(responses=ProductImageSerializer(many=True))
+    @action(detail=True, methods=['delete'], url_path=r'images/(?P<image_id>[0-9]+)')
+    def delete_image(self, request, pk=None, image_id=None):
+        with transaction.atomic():
+            product = get_object_or_404(Product.objects.select_for_update(), pk=pk)
+            images = product.product_images
+            image = get_object_or_404(images.exclude(image_file=''), pk=image_id)
+            image.delete()
+
+            if image.is_main:
+                replacement = images.order_by('-is_main', 'id').first()
+                if replacement and not replacement.is_main:
+                    replacement.is_main = True
+                    replacement.save(update_fields=['is_main'])
+
+            return self._product_images_response(images)
+
+    def _product_images_response(self, images, status_code=status.HTTP_200_OK):
+        serializer = ProductImageSerializer(
+            images.order_by('id'), many=True, context=self.get_serializer_context(),
+        )
+        return Response(serializer.data, status=status_code)
 
 
 class FavoriteViewSet(

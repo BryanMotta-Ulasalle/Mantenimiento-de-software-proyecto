@@ -1,3 +1,7 @@
+from uuid import uuid4
+
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import Category, Favorite, Product, ProductImage, ProductReview
@@ -10,10 +14,49 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'description', 'total_products')
         
 class ProductImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    is_uploaded = serializers.SerializerMethodField()
+
+    @extend_schema_field(OpenApiTypes.URI)
+    def get_image_url(self, image):
+        if not image.image_file:
+            return image.image_url
+
+        url = image.image_file.url
+        request = self.context.get('request')
+        return request.build_absolute_uri(url) if request else url
+
+    def get_is_uploaded(self, image) -> bool:
+        return bool(image.image_file)
 
     class Meta:
         model = ProductImage
-        fields = ('id', 'image_url', 'is_main')        
+        fields = ('id', 'image_url', 'is_main', 'is_uploaded')
+
+
+@extend_schema_field(OpenApiTypes.BINARY)
+class ProductImageFileField(serializers.ImageField):
+    MAX_SIZE = 5 * 1024 * 1024
+    EXTENSIONS = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}
+
+    def to_internal_value(self, data):
+        if getattr(data, 'size', 0) > self.MAX_SIZE:
+            raise serializers.ValidationError('La imagen debe pesar como máximo 5 MB.')
+
+        image = super().to_internal_value(data)
+        extension = self.EXTENSIONS.get(image.image.format)
+        if not extension:
+            raise serializers.ValidationError('Usa una imagen JPG, PNG o WebP.')
+
+        image.name = f'{uuid4().hex}.{extension}'
+        return image
+
+
+class ProductImageUploadSerializer(serializers.Serializer):
+    image_file = ProductImageFileField(error_messages={
+        'invalid_image': 'El archivo no es una imagen válida.',
+    })
+    is_main = serializers.BooleanField(default=False)
 
 
 class ProductSerializer(serializers.ModelSerializer):

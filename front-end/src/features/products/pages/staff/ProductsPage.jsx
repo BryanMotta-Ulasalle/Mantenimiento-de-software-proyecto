@@ -1,4 +1,4 @@
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import Button from "../../../../components/Button";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
@@ -9,6 +9,7 @@ import Modal from "../../../../components/Modal";
 import StatusBadge from "../../../../components/StatusBadge";
 import { formatProductPrice } from "../../utils/productFormatters";
 import ProductForm from "../../components/staff/ProductForm";
+import ProductImagesModal from "../../components/staff/ProductImagesModal";
 import ProductTable from "../../components/staff/ProductTable";
 import ProductFilters from "../../components/shared/ProductFilters";
 import useCategory from "../../../Home/hooks/useCategory";
@@ -57,6 +58,7 @@ const ProductsPage = () => {
     error: categoriesError,
   } = useCategory();
   const [formProduct, setFormProduct] = useState(undefined);
+  const [productForImages, setProductForImages] = useState(null);
   const [productToDelete, setProductToDelete] = useState(null);
   const {
     createProduct,
@@ -162,6 +164,15 @@ const ProductsPage = () => {
           </button>
           <button
             type="button"
+            onClick={() => setProductForImages(product)}
+            className="cursor-pointer rounded-lg p-2 text-stone-700 hover:bg-stone-100"
+            aria-label={`Imágenes de ${product.name}`}
+            title="Gestionar imágenes"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
             onClick={() => {
               resetDelete();
               setProductToDelete(product);
@@ -251,6 +262,14 @@ const ProductsPage = () => {
             error={isEditing ? updateError : createError}
           />
         </Modal>
+      )}
+
+      {productForImages && (
+        <ProductImagesModal
+          product={productForImages}
+          onClose={() => setProductForImages(null)}
+          onSaved={refetch}
+        />
       )}
 
       {productToDelete && (

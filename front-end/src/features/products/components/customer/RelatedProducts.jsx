@@ -3,6 +3,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import H2 from "../../../../components/H2";
 import useProducts from "../../hooks/useProducts";
+import { formatProductPrice } from "../../utils/productFormatters";
+import { getMainProductImage } from "../../utils/productImages";
+import ProductImage from "../shared/ProductImage";
 
 const MAX_RELATED_PRODUCTS = 6;
 const scrollButtonClass =
@@ -88,9 +91,19 @@ const RelatedProducts = ({ productId, categoryId }) => {
               to={`/tienda/productos/${product.id}/`}
               className="group flex h-full flex-col overflow-hidden rounded-xl border border-stone-200 bg-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-golden"
             >
-              <div className="p-3">
+              <div aria-hidden="true">
+                <ProductImage
+                  src={getMainProductImage(product)}
+                  alt={product.name}
+                  className="aspect-[4/3] w-full"
+                />
+              </div>
+              <div className="flex flex-1 flex-col justify-between gap-1 p-3">
                 <p className="break-words font-semibold text-stone-900 group-hover:text-golden">
                   {product.name}
+                </p>
+                <p className="text-sm font-semibold text-stone-700">
+                  {formatProductPrice(product.price)}
                 </p>
               </div>
             </Link>
