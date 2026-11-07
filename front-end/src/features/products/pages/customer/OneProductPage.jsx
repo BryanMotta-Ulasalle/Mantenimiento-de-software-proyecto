@@ -5,6 +5,7 @@ import useAuth from "../../../../hooks/useAuth";
 import useAddToCart from "../../../orders/hooks/useAddToCart";
 import ProductReviews from "../../components/customer/ProductReviews";
 import OneProductCard from "../../components/customer/OneProductCard";
+import RelatedProducts from "../../components/customer/RelatedProducts";
 import useProductReviews from "../../hooks/useProductReviews";
 import useProductById from "../../hooks/useProductById";
 
@@ -72,11 +73,19 @@ const OneProductPage = () => {
         </nav>
       )}
       <OneProductCard
+        key={`detail-${product.id}`}
         product={product}
         onAddToCart={handleAddToCart}
         isAdding={isAdding}
       />
       <ErrorMessage message={addError} className="mx-5 mb-8" />
+      {product.category?.id && (
+        <RelatedProducts
+          key={`related-${product.id}`}
+          productId={product.id}
+          categoryId={product.category.id}
+        />
+      )}
       <ProductReviews
         productId={product.id}
         isAuthenticated={isAuthenticated}
