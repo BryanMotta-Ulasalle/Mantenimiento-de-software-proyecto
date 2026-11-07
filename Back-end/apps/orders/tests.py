@@ -36,6 +36,37 @@ class OrderStockTests(APITestCase):
         self.url = reverse("order-list")
         self.client.force_authenticate(user=self.user)
 
+    def test_cancelling_checkout_restores_stock_once_for_each_product(self):
+        second_product = Product.objects.create(
+            category=self.category, name='Otro producto', description='Producto de prueba',
+            price=Decimal('10.00'), stock=5,
+        )
+        CartItem.objects.create(cart=self.cart, product=self.product, quantity=1)
+        CartItem.objects.create(cart=self.cart, product=self.product, quantity=1)
+        CartItem.objects.create(cart=self.cart, product=second_product, quantity=3)
+        order_response = self.client.post(self.url, {'shipping_address': 'Av. Principal 123'}, format='json')
+        self.assertEqual(order_response.status_code, status.HTTP_201_CREATED)
+        self.product.refresh_from_db()
+        second_product.refresh_from_db()
+        self.assertEqual((self.product.stock, second_product.stock), (0, 2))
+
+        admin = User.objects.create_user(
+            email='inventory-admin@example.com', name='Admin', role=Role.objects.get(name='Admin'),
+        )
+        self.client.force_authenticate(admin)
+        status_url = reverse('order-status', args=[order_response.data['id']])
+        for order_status, expected_stock in (
+            (Order.Status.PROCESSING, (0, 2)),
+            (Order.Status.CANCELLED, (2, 5)),
+            (Order.Status.CANCELLED, (2, 5)),
+        ):
+            with self.subTest(order_status=order_status):
+                response = self.client.patch(status_url, {'status': order_status}, format='json')
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.product.refresh_from_db()
+                second_product.refresh_from_db()
+                self.assertEqual((self.product.stock, second_product.stock), expected_stock)
+
     def test_order_rejects_insufficient_stock(self):
         CartItem.objects.create(
             cart=self.cart,

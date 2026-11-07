@@ -1,10 +1,12 @@
 from decimal import Decimal
 
 from django.db import transaction
+from django.db.models import F, Sum
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from apps.products.models import Product
 from .models import Order, OrderItem, Cart, CartItem
@@ -46,11 +48,23 @@ class OrderViewSet(
         permission_classes=[IsAdmin],
     )
     def update_status(self, request, pk=None):
-        order = self.get_object()
-        serializer = OrderStatusSerializer(order, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+        with transaction.atomic():
+            order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
+            previous_status = order.status
+            serializer = OrderStatusSerializer(order, data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            if order.status == Order.Status.CANCELLED and order.status != previous_status:
+                quantities = order.items.values('product_id').annotate(
+                    total_quantity=Sum('quantity'),
+                ).order_by('product_id')
+                for item in quantities:
+                    Product.objects.filter(pk=item['product_id']).update(
+                        stock=F('stock') + item['total_quantity'],
+                    )
+
+            return Response(serializer.data)
     
     def perform_create(self, serializer):
         user = self.request.user
@@ -75,7 +89,7 @@ class OrderViewSet(
                 product.id: product
                 for product in Product.objects.select_for_update().filter(
                     id__in=requested_quantities
-                )
+                ).order_by('id')
             }
 
             stock_errors = []
