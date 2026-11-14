@@ -476,18 +476,24 @@ class OrderStatusUpdateTests(APITestCase):
         self.order.refresh_from_db()
         self.assertEqual(self.order.status, Order.Status.PROCESSING)
 
-    def test_admin_can_change_processing_to_completed(self):
+    def test_admin_can_ship_and_complete_an_order_and_customer_can_track_it(self):
         self.order.status = Order.Status.PROCESSING
         self.order.save(update_fields=['status'])
 
-        response = self.update_status_as_admin(
-            self.order,
-            Order.Status.COMPLETED,
-        )
+        for next_status in (Order.Status.SHIPPED, Order.Status.COMPLETED):
+            with self.subTest(next_status=next_status):
+                response = self.update_status_as_admin(self.order, next_status)
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(response.data, {'status': next_status})
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.order.refresh_from_db()
-        self.assertEqual(self.order.status, Order.Status.COMPLETED)
+                self.client.force_authenticate(user=self.customer)
+                detail = self.client.get(reverse('order-detail', args=[self.order.pk]))
+                self.assertEqual(detail.status_code, status.HTTP_200_OK)
+                self.assertEqual(detail.data['status'], next_status)
+
+        self.client.force_authenticate(user=self.employee)
+        detail = self.client.get(reverse('order-detail', args=[self.order.pk]))
+        self.assertEqual(detail.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_admin_can_cancel_pending_order(self):
         response = self.update_status_as_admin(
@@ -557,7 +563,11 @@ class OrderStatusUpdateTests(APITestCase):
 
     def test_rejects_invalid_transitions(self):
         transitions = (
+            (Order.Status.PENDING, Order.Status.SHIPPED),
             (Order.Status.PENDING, Order.Status.COMPLETED),
+            (Order.Status.PROCESSING, Order.Status.COMPLETED),
+            (Order.Status.SHIPPED, Order.Status.PROCESSING),
+            (Order.Status.SHIPPED, Order.Status.CANCELLED),
             (Order.Status.COMPLETED, Order.Status.PENDING),
             (Order.Status.COMPLETED, Order.Status.PROCESSING),
             (Order.Status.COMPLETED, Order.Status.CANCELLED),
@@ -579,7 +589,7 @@ class OrderStatusUpdateTests(APITestCase):
                 self.assertEqual(order.status, current_status)
 
     def test_rejects_invalid_status_value(self):
-        response = self.update_status_as_admin(self.order, 'shipped')
+        response = self.update_status_as_admin(self.order, 'unknown')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('status', response.data)

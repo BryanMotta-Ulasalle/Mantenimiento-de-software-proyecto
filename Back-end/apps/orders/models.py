@@ -2,9 +2,10 @@ from django.db import models
 
 class Order(models.Model):
     class Status(models.TextChoices):
-        PENDING = 'pending', 'Pendiente'
-        PROCESSING = 'processing', 'Procesando'
-        COMPLETED = 'completed', 'Completado'
+        PENDING = 'pending', 'Pedido recibido'
+        PROCESSING = 'processing', 'En preparación'
+        SHIPPED = 'shipped', 'En camino'
+        COMPLETED = 'completed', 'Entregado'
         CANCELLED = 'cancelled', 'Cancelado'
 
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='orders', db_column='user_id')

@@ -1,13 +1,15 @@
 export const ORDER_STATUS_LABELS = {
-  pending: "Pendiente",
-  processing: "Procesando",
-  completed: "Completado",
+  pending: "Pedido recibido",
+  processing: "En preparación",
+  shipped: "En camino",
+  completed: "Entregado",
   cancelled: "Cancelado",
 };
 
 export const ORDER_STATUS_TRANSITIONS = {
   pending: ["processing", "cancelled"],
-  processing: ["completed", "cancelled"],
+  processing: ["shipped", "cancelled"],
+  shipped: ["completed"],
   completed: [],
   cancelled: [],
 };

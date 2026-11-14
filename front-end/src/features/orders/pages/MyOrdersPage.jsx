@@ -1,16 +1,21 @@
+import { Truck } from "lucide-react";
+import { useState } from "react";
 import { useLocation } from "react-router-dom";
+import Button from "../../../components/Button";
 import EmptyState from "../../../components/EmptyState";
 import ErrorMessage from "../../../components/ErrorMessage";
 import H2 from "../../../components/H2";
 import LoadingState from "../../../components/LoadingState";
 import { formatProductPrice } from "../../products/utils/productFormatters";
 import OrderStatusBadge from "../components/OrderStatusBadge";
+import OrderTrackingModal from "../components/OrderTrackingModal";
 import useOrders from "../hooks/useOrders";
 import { formatOrderDate } from "../utils/orderFormatters";
 
 const MyOrdersPage = () => {
   const location = useLocation();
   const { orders, isLoading, error } = useOrders();
+  const [trackedOrderId, setTrackedOrderId] = useState(null);
   const createdOrderId = location.state?.createdOrderId;
 
   if (isLoading) {
@@ -80,9 +85,25 @@ const MyOrdersPage = () => {
                   </ul>
                 </div>
               )}
+              <Button
+                size="sm"
+                className="mt-4 inline-flex min-h-11 gap-2 border border-amber-200 bg-amber-50 px-3 text-amber-900 hover:bg-amber-100"
+                aria-haspopup="dialog"
+                aria-label={`Ver seguimiento del pedido #${order.id}`}
+                onClick={() => setTrackedOrderId(order.id)}
+              >
+                <Truck className="size-4" aria-hidden="true" />
+                Ver seguimiento
+              </Button>
             </article>
           ))}
         </div>
+      )}
+      {trackedOrderId !== null && (
+        <OrderTrackingModal
+          orderId={trackedOrderId}
+          onClose={() => setTrackedOrderId(null)}
+        />
       )}
     </section>
   );

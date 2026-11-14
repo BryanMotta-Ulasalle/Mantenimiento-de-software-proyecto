@@ -700,19 +700,20 @@ class ProductReviewApiTests(APITestCase):
         self.assertEqual(ProductReview.objects.count(), 1)
 
     def test_customer_without_completed_purchase_cannot_review(self):
-        self.completed_order.status = Order.Status.PROCESSING
-        self.completed_order.save(update_fields=['status'])
         self.client.force_authenticate(user=self.customer)
 
-        response = self.client.post(
-            self.list_url,
-            {'product_id': self.product.id, 'rating': 5, 'comment': ''},
-            format='json',
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn('product_id', response.data)
-        self.assertFalse(ProductReview.objects.exists())
+        for order_status in (Order.Status.PROCESSING, Order.Status.SHIPPED):
+            with self.subTest(order_status=order_status):
+                self.completed_order.status = order_status
+                self.completed_order.save(update_fields=['status'])
+                response = self.client.post(
+                    self.list_url,
+                    {'product_id': self.product.id, 'rating': 5, 'comment': ''},
+                    format='json',
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('product_id', response.data)
+                self.assertFalse(ProductReview.objects.exists())
 
     def test_anonymous_and_non_customer_users_cannot_create_reviews(self):
         payload = {'product_id': self.product.id, 'rating': 5, 'comment': ''}

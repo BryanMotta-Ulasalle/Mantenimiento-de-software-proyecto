@@ -35,9 +35,10 @@ class OrderStatusSerializer(serializers.ModelSerializer):
             Order.Status.CANCELLED,
         },
         Order.Status.PROCESSING: {
-            Order.Status.COMPLETED,
+            Order.Status.SHIPPED,
             Order.Status.CANCELLED,
         },
+        Order.Status.SHIPPED: {Order.Status.COMPLETED},
         Order.Status.COMPLETED: set(),
         Order.Status.CANCELLED: set(),
     }
