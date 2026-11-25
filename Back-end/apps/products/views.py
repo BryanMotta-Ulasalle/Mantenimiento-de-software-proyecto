@@ -1,5 +1,6 @@
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, F
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
@@ -85,6 +86,13 @@ class ProductViewSet(viewsets.ModelViewSet):
             raise ValidationError({
                 'stock': 'Use available o out.'
             })
+
+        if params.get('offers') == 'true':
+            now = timezone.now()
+            queryset = queryset.filter(
+                status=True, stock__gt=0, offer_enabled=True, offer_price__gt=0,
+                offer_price__lt=F('price'), offer_starts_at__lte=now, offer_ends_at__gt=now,
+            )
 
         ordering = params.get('ordering')
         if ordering:

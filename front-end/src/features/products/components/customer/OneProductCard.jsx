@@ -1,15 +1,13 @@
 import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import Button from "../../../../components/Button";
-import {
-  formatProductPrice,
-  isProductAvailable,
-} from "../../utils/productFormatters";
+import { isProductAvailable } from "../../utils/productFormatters";
 import {
   getMainProductImage,
   getProductImages,
 } from "../../utils/productImages";
 import ProductImage from "../shared/ProductImage";
+import ProductPrice from "../shared/ProductPrice";
 
 const OneProductCard = ({ product, onAddToCart, isAdding }) => {
   const images = getProductImages(product);
@@ -72,7 +70,7 @@ const OneProductCard = ({ product, onAddToCart, isAdding }) => {
           {product.name}
         </h1>
         <p className="text-3xl font-bold text-stone-900">
-          {formatProductPrice(product.price)}
+          <ProductPrice product={product} />
         </p>
         <p className="leading-7 text-stone-600">{product.description}</p>
         <p className="font-medium text-stone-700">

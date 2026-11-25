@@ -2,6 +2,7 @@ import { ChevronDown, Menu, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import useCart from "../../../features/orders/hooks/useCart";
+import OrderNotifications from "../../../features/orders/components/OrderNotifications";
 import useAuth from "../../../hooks/useAuth";
 import Button from "../../Button";
 import ButtonLink from "../../ButtonLink";
@@ -10,11 +11,11 @@ import Logo from "./Logo";
 import MenuMobile from "./MenuMobile";
 import NavBarPublic from "./NavBarPublic";
 
-const HeaderPublic = () => {
+const HeaderPublic = ({isAccountOpen, setIsAccountOpen}) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isAccountOpen, setIsAccountOpen] = useState(false);
+
   const isHome = location.pathname === "/";
   const { isAuthenticated, isAdmin, isCustomer, logout, user, isEmployee } = useAuth();
   const { itemCount } = useCart();
@@ -39,6 +40,7 @@ const HeaderPublic = () => {
         <NavBarPublic isHome={isHome} />
 
         <div className="ml-auto flex items-center gap-3 lg:ml-0">
+          {isAuthenticated && <OrderNotifications key={user.id} className={foregroundClass} />}
           <Link
             to="/carrito"
             className={`relative rounded-xl p-2 hover:bg-golden/10 ${foregroundClass}`}
@@ -82,6 +84,7 @@ const HeaderPublic = () => {
                   isAdmin={isAdmin}
                   isEmployee={isEmployee}
                   isCustomer={isCustomer}
+                  
                 />
               )}
             </div>

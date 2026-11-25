@@ -29,6 +29,7 @@ const AppRouter = () => {
       <Route path="/" element={<Inicio />} />
 
       <Route element={<PublicLayout />}>
+      
         <Route path="/tienda/productos" element={<ProductsCustomers />} />
         <Route path="/tienda/productos/:id/" element={<OneProductPage />} />
         <Route

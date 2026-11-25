@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getSellingPrice } from "../../products/hooks/useProductPricing";
 import EmptyState from "../../../components/EmptyState";
 import ErrorMessage from "../../../components/ErrorMessage";
 import H2 from "../../../components/H2";
@@ -13,6 +15,12 @@ import useUpdateCartItem from "../hooks/useUpdateCartItem";
 const CartPage = () => {
   const navigate = useNavigate();
   const { cart, isLoading, error } = useCart();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const total = cart.items.reduce((sum, item) => sum + Number(getSellingPrice(item.product, now).price) * item.quantity, 0).toFixed(2);
   const {
     updateItem,
     isLoading: isUpdating,
@@ -97,7 +105,7 @@ const CartPage = () => {
         </div>
 
         <CheckoutForm
-          total={cart.total_price}
+          total={total}
           onSubmit={handleCheckout}
           isLoading={isCreatingOrder}
           error={orderError}

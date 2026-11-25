@@ -3,12 +3,15 @@ import Button from "../../../components/Button";
 import ProductImage from "../../products/components/shared/ProductImage";
 import { formatProductPrice } from "../../products/utils/productFormatters";
 import { getMainProductImage } from "../../products/utils/productImages";
+import useProductPricing from "../../products/hooks/useProductPricing";
+import ProductPrice from "../../products/components/shared/ProductPrice";
 
 const CartItemRow = ({ item, onUpdate, onDelete, disabled }) => {
   const product = item.product;
   const quantity = Number(item.quantity || 0);
   const stock = Number(product?.stock || 0);
-  const subtotal = Number(product?.price || 0) * quantity;
+  const { price } = useProductPricing(product);
+  const subtotal = Number(price || 0) * quantity;
   const isProductInactive = !product?.status;
   const cannotDecrease = disabled || quantity <= 1;
   const cannotIncrease = disabled || isProductInactive || quantity >= stock;
@@ -29,7 +32,7 @@ const CartItemRow = ({ item, onUpdate, onDelete, disabled }) => {
           {product?.name || "Producto no disponible"}
         </h2>
         <p className="text-sm text-stone-500">
-          {formatProductPrice(product?.price)} por unidad
+          <ProductPrice product={product} /> por unidad
         </p>
         <p className="text-sm text-stone-500">Stock disponible: {stock}</p>
         {isProductInactive && (

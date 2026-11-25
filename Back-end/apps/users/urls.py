@@ -1,5 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from .destinations import DestinationViewSet
 from .password_reset import PasswordResetConfirmView, PasswordResetRequestView
 from .views import RoleViewSet, UserViewSet, RegisterView
 from rest_framework_simplejwt.views import (
@@ -9,6 +10,7 @@ from rest_framework_simplejwt.views import (
 
 
 router = DefaultRouter()
+router.register(r'shipping-destinations', DestinationViewSet, basename='shipping-destination')
 router.register(r'users', UserViewSet, basename='users')
 router.register(r'roles', RoleViewSet, basename='roles')
 

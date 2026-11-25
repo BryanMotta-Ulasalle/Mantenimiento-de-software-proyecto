@@ -37,3 +37,17 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
+
+
+class ShippingDestination(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shipping_destinations')
+    label = models.CharField(max_length=50)
+    address = models.CharField(max_length=255)
+    phone = models.CharField(max_length=16)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('-is_default', 'id')
+        constraints = [models.UniqueConstraint(
+            fields=['user'], condition=models.Q(is_default=True), name='one_default_shipping_destination',
+        )]

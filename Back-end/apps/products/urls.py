@@ -1,5 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from .imports import ProductImportViewSet
 
 from .views import (
     CategoryViewSet,
@@ -10,6 +11,7 @@ from .views import (
 
 
 router = DefaultRouter()
+router.register(r'product-imports', ProductImportViewSet, basename='product-import')
 router.register(r'categories', CategoryViewSet, basename='category')
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'favorites', FavoriteViewSet, basename='favorite')

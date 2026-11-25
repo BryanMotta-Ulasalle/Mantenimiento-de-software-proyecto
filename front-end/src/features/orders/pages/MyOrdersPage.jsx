@@ -1,6 +1,6 @@
 import { Truck } from "lucide-react";
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import Button from "../../../components/Button";
 import EmptyState from "../../../components/EmptyState";
 import ErrorMessage from "../../../components/ErrorMessage";
@@ -14,9 +14,11 @@ import { formatOrderDate } from "../utils/orderFormatters";
 
 const MyOrdersPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { orders, isLoading, error } = useOrders();
   const [trackedOrderId, setTrackedOrderId] = useState(null);
   const createdOrderId = location.state?.createdOrderId;
+  const selectedOrderId = trackedOrderId ?? location.state?.trackingOrderId;
 
   if (isLoading) {
     return <LoadingState message="Cargando tus ordenes..." />;
@@ -55,6 +57,7 @@ const MyOrdersPage = () => {
                   <p className="mt-1 text-sm text-stone-500">
                     Envio: {order.shipping_address}
                   </p>
+                  <p className="mt-1 text-sm text-stone-500">Teléfono: {order.shipping_phone || "Sin teléfono registrado"}</p>
                   <p className="mt-1 text-sm text-stone-500">
                     {formatOrderDate(order.created_at)}
                   </p>
@@ -99,10 +102,14 @@ const MyOrdersPage = () => {
           ))}
         </div>
       )}
-      {trackedOrderId !== null && (
+      {selectedOrderId != null && (
         <OrderTrackingModal
-          orderId={trackedOrderId}
-          onClose={() => setTrackedOrderId(null)}
+          key={selectedOrderId}
+          orderId={selectedOrderId}
+          onClose={() => {
+            setTrackedOrderId(null);
+            if (location.state?.trackingOrderId) navigate(location.pathname, { replace: true, state: { ...location.state, trackingOrderId: null } });
+          }}
         />
       )}
     </section>

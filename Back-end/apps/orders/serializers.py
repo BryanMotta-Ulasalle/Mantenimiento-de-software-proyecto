@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from decimal import Decimal
+from django.utils import timezone
+from apps.users.destinations import normalize_phone
 
 from apps.products.models import Product
 
@@ -13,6 +15,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    shipping_phone = serializers.CharField(max_length=40, required=False, allow_blank=True, default='')
+    expected_total = serializers.DecimalField(max_digits=10, decimal_places=2, write_only=True, required=False)
+
+    def validate_shipping_phone(self, value):
+        return normalize_phone(value) if value else value
 
     class Meta:
         model = Order
@@ -23,6 +30,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'items',
             'status',
             'shipping_address',
+            'shipping_phone',
+            'expected_total',
             'created_at',
         )
         read_only_fields = ('total_price', 'status', 'user', 'created_at')
@@ -112,8 +121,9 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         total = Decimal('0.00')
+        pricing_time = self.context.setdefault('pricing_time', timezone.now())
         for item in obj.items.select_related('product').all():
-            product_price = item.product.price or Decimal('0.00')
+            product_price = item.product.selling_price(pricing_time)
             total += Decimal(item.quantity) * product_price
         return total
 

@@ -15,9 +15,12 @@ const useCreateOrder = () => {
       setError(null);
       const order = await createOrder(shippingAddress);
       setData(order);
-      await refreshCart();
+      await refreshCart({ silent: true }).catch(() => {});
       return order;
     } catch (requestError) {
+      if (requestError.response?.data?.price_changed) {
+        await refreshCart({ silent: true }).catch(() => {});
+      }
       setError(
         getApiErrorMessage(requestError, "No se pudo crear la orden."),
       );

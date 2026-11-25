@@ -12,10 +12,10 @@ export const fetchOrderById = async (orderId) => {
   return data;
 };
 
-export const createOrder = async (shippingAddress) => {
+export const createOrder = async (shippingData) => {
   const { data } = await apiClient.post(
     "/orders/",
-    { shipping_address: shippingAddress },
+    shippingData,
     { withAuth: true },
   );
   return data;

@@ -79,6 +79,7 @@ const OrderDetailModal = ({
               </dt>
               <dd className="mt-1">{order.shipping_address}</dd>
             </div>
+            <div><dt className="text-xs font-semibold uppercase text-stone-500">Teléfono de envío</dt><dd className="mt-1">{order.shipping_phone || "Sin teléfono registrado"}</dd></div>
             <div>
               <dt className="text-xs font-semibold uppercase text-stone-500">
                 Total

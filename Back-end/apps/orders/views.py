@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import F, Sum
+from django.utils import timezone
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -9,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
 from apps.products.models import Product
-from .models import Order, OrderItem, Cart, CartItem
+from .models import Order, OrderItem, Cart, CartItem, OrderNotification
 from .serializers import (
     OrderSerializer,
     OrderItemSerializer,
@@ -31,7 +32,7 @@ class OrderViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = [IsAuthenticated]
-    queryset = Order.objects.select_related('user').prefetch_related('items').order_by('id')
+    queryset = Order.objects.select_related('user').prefetch_related('items').order_by('-created_at', '-id')
     serializer_class = OrderSerializer
 
     def get_queryset(self):
@@ -54,6 +55,9 @@ class OrderViewSet(
             serializer = OrderStatusSerializer(order, data=request.data)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+
+            if order.status != previous_status:
+                OrderNotification.objects.create(user=order.user, order=order, status=order.status)
 
             if order.status == Order.Status.CANCELLED and order.status != previous_status:
                 quantities = order.items.values('product_id').annotate(
@@ -118,14 +122,21 @@ class OrderViewSet(
                     errors['product'] = product_errors
                 raise ValidationError(errors)
 
+            pricing_time = timezone.now()
+            prices = {pk: product.selling_price(pricing_time) for pk, product in products.items()}
+
             total = sum(
                 (
                     Decimal(cart_item.quantity)
-                    * (products[cart_item.product_id].price or Decimal('0.00'))
+                    * prices[cart_item.product_id]
                     for cart_item in cart_items
                 ),
                 Decimal('0.00'),
             )
+
+            expected_total = serializer.validated_data.pop('expected_total', None)
+            if expected_total is not None and expected_total != total:
+                raise ValidationError({'price_changed': 'El precio del carrito cambió. Revisa el nuevo total antes de confirmar.'})
 
             order = serializer.save(user=user, total_price=total)
 
@@ -134,7 +145,7 @@ class OrderViewSet(
                     order=order,
                     product=products[cart_item.product_id],
                     quantity=cart_item.quantity,
-                    unit_price=products[cart_item.product_id].price,
+                    unit_price=prices[cart_item.product_id],
                 )
                 for cart_item in cart_items
             ]

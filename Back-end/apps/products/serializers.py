@@ -1,4 +1,5 @@
 from uuid import uuid4
+from django.utils import timezone
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
@@ -60,6 +61,35 @@ class ProductImageUploadSerializer(serializers.Serializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
+    effective_price = serializers.SerializerMethodField()
+    is_on_offer = serializers.SerializerMethodField()
+
+    def get_effective_price(self, product) -> str:
+        return str(product.selling_price(self.context.setdefault('pricing_time', timezone.now())))
+
+    def get_is_on_offer(self, product) -> bool:
+        return product.offer_is_active(self.context.setdefault('pricing_time', timezone.now()))
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        offer_fields = {'offer_price', 'offer_starts_at', 'offer_ends_at', 'offer_enabled'}
+        if request and offer_fields.intersection(attrs) and getattr(getattr(request.user, 'role', None), 'name', None) != 'Admin':
+            raise serializers.ValidationError('Solo Admin puede gestionar ofertas.')
+
+        def value(field):
+            return attrs.get(field, getattr(self.instance, field, None))
+
+        offer_price = value('offer_price')
+        starts = value('offer_starts_at')
+        ends = value('offer_ends_at')
+        if offer_price is not None and not 0 < offer_price < value('price'):
+            raise serializers.ValidationError({'offer_price': 'El precio de oferta debe ser positivo y menor que el precio normal.'})
+        if starts and ends and starts >= ends:
+            raise serializers.ValidationError({'offer_ends_at': 'El fin debe ser posterior al inicio.'})
+        if value('offer_enabled') and (offer_price is None or not starts or not ends):
+            raise serializers.ValidationError({'offer_enabled': 'Indica el precio y las fechas de la oferta.'})
+        return attrs
+
     category = CategorySerializer(read_only=True)
 
     category_id = serializers.PrimaryKeyRelatedField(
@@ -78,6 +108,12 @@ class ProductSerializer(serializers.ModelSerializer):
             'name',
             'description',
             'price',
+            'offer_price',
+            'offer_starts_at',
+            'offer_ends_at',
+            'offer_enabled',
+            'effective_price',
+            'is_on_offer',
             'stock',
             'status',
             'product_images',

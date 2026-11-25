@@ -1,12 +1,10 @@
 import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import Button from "../../../../components/Button";
-import {
-  formatProductPrice,
-  isProductAvailable,
-} from "../../utils/productFormatters";
+import { isProductAvailable } from "../../utils/productFormatters";
 import { getMainProductImage } from "../../utils/productImages";
 import ProductImage from "./ProductImage";
+import ProductPrice from "./ProductPrice";
 
 const ProductCard = ({
   product,
@@ -60,7 +58,7 @@ const ProductCard = ({
 
         <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="text-lg font-bold text-stone-900">
-            {formatProductPrice(product.price)}
+            <ProductPrice product={product} />
           </span>
           <div className="flex items-center gap-2">
             {onToggleFavorite && (

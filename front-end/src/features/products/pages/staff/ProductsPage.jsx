@@ -1,4 +1,7 @@
-import { ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import { ImagePlus, Pencil, Plus, Trash2, Tags, Upload } from "lucide-react";
+import useAuth from "../../../../hooks/useAuth";
+import ProductOfferModal from "../../components/staff/ProductOfferModal";
+import ProductImportModal from "../../components/staff/ProductImportModal";
 import { useState } from "react";
 import Button from "../../../../components/Button";
 import ConfirmDialog from "../../../../components/ConfirmDialog";
@@ -38,6 +41,9 @@ const formatDate = (value) => {
 };
 
 const ProductsPage = () => {
+  const { isAdmin } = useAuth();
+  const [offerProduct, setOfferProduct] = useState(null);
+  const [importing, setImporting] = useState(false);
   const [filters, setFilters] = useState({
     search: "",
     category: "",
@@ -171,6 +177,7 @@ const ProductsPage = () => {
           >
             <ImagePlus className="h-4 w-4" />
           </button>
+          {isAdmin && <button type="button" onClick={() => setOfferProduct(product)} aria-label={`Gestionar oferta de ${product.name}`} title="Gestionar oferta" className="rounded-lg p-2 text-amber-800 hover:bg-amber-50"><Tags className="size-4" /></button>}
           <button
             type="button"
             onClick={() => {
@@ -215,6 +222,7 @@ const ProductsPage = () => {
       </div>
 
       <ErrorMessage message={error || categoriesError} />
+      <Button onClick={() => setImporting(true)} className="flex gap-2 border border-stone-300 px-4 py-2"><Upload className="size-4" />Importar CSV</Button>
       <ProductFilters
         filters={filters}
         categories={categories}
@@ -271,6 +279,8 @@ const ProductsPage = () => {
           onSaved={refetch}
         />
       )}
+      {offerProduct && <ProductOfferModal product={offerProduct} onClose={() => setOfferProduct(null)} onSaved={refetch} />}
+      {importing && <ProductImportModal onClose={() => setImporting(false)} onSaved={refetch} />}
 
       {productToDelete && (
         <ConfirmDialog

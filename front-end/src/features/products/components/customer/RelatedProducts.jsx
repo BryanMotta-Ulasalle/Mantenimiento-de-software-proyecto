@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import H2 from "../../../../components/H2";
 import useProducts from "../../hooks/useProducts";
-import { formatProductPrice } from "../../utils/productFormatters";
+import ProductPrice from "../shared/ProductPrice";
 import { getMainProductImage } from "../../utils/productImages";
 import ProductImage from "../shared/ProductImage";
 
@@ -103,7 +103,7 @@ const RelatedProducts = ({ productId, categoryId }) => {
                   {product.name}
                 </p>
                 <p className="text-sm font-semibold text-stone-700">
-                  {formatProductPrice(product.price)}
+                  <ProductPrice product={product} />
                 </p>
               </div>
             </Link>

@@ -17,6 +17,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     shipping_address = models.CharField(max_length=255)
+    shipping_phone = models.CharField(max_length=16, blank=True, default='')
 
     def __str__(self):
         return f'Order #{self.id} by {self.user.email}'
@@ -24,6 +25,17 @@ class Order(models.Model):
     class Meta:
         db_table = 'orders'
         
+class OrderNotification(models.Model):
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=Order.Status.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ('-created_at', '-id')
+
+
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items', db_column='order_id')
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='order_items', db_column='product_id')

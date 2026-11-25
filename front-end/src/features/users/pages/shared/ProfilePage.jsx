@@ -4,6 +4,7 @@ import useAuth from "../../../../hooks/useAuth";
 import InformationProfile from "../../components/InformationProfile";
 import NameProfile from "../../components/NameProfile";
 import useUpdateProfile from "../../hooks/useUpdateProfile";
+import ShippingDestinations from "../../components/ShippingDestinations";
 
 const ProfilePage = () => {
   const { user, isLoading: isSessionLoading } = useAuth();
@@ -54,6 +55,7 @@ const ProfilePage = () => {
           isLoading={isUpdating}
           error={error}
         />
+        <ShippingDestinations key={user.id} />
       </div>
     </div>
   );

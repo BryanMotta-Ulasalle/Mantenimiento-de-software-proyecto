@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from uuid import uuid4
 
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -17,11 +19,27 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.PositiveIntegerField()
     status = models.BooleanField(default=True)
+    offer_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    offer_starts_at = models.DateTimeField(null=True, blank=True)
+    offer_ends_at = models.DateTimeField(null=True, blank=True)
+    offer_enabled = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
+
+    def offer_is_active(self, at=None):
+        at = at or timezone.now()
+        return bool(
+            self.status and self.stock > 0 and self.offer_enabled
+            and self.offer_price is not None and 0 < self.offer_price < self.price
+            and self.offer_starts_at and self.offer_ends_at
+            and self.offer_starts_at <= at < self.offer_ends_at
+        )
+
+    def selling_price(self, at=None):
+        return self.offer_price if self.offer_is_active(at) else self.price
     
     class Meta:
         db_table = 'products'
@@ -37,6 +55,15 @@ class ProductImage(models.Model):
     
     class Meta:
         db_table = 'product_images'
+
+
+class ProductImport(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    rows = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    product_ids = models.JSONField(default=list)
 
 
 class Favorite(models.Model):

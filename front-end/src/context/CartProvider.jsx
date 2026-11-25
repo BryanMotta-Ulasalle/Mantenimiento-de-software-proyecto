@@ -21,13 +21,13 @@ const CartProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const refreshCart = async () => {
+  const refreshCart = async ({ silent = false } = {}) => {
     if (!isAuthenticated) {
       return EMPTY_CART;
     }
 
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError(null);
       const currentCart = await fetchCurrentCart(user.id);
       setCart(currentCart);
@@ -38,7 +38,7 @@ const CartProvider = ({ children }) => {
       );
       throw requestError;
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
